@@ -1,0 +1,42 @@
+{
+  "items": [
+    { "id": "ui-select", "placeholder": true, "category": "ui", "src": "/media/sound/ui-select.mp3",
+      "title": { "fr": "Démo — Sélection d’interface", "en": "Demo — UI select" },
+      "description": { "fr": "Son généré pour tester la page — à remplacer.", "en": "Generated sound to test the page — to replace." } },
+    { "id": "ui-confirm", "placeholder": true, "category": "ui", "src": "/media/sound/ui-confirm.mp3",
+      "title": { "fr": "Démo — Validation", "en": "Demo — Confirm" },
+      "description": { "fr": "Son généré pour tester la page — à remplacer.", "en": "Generated sound to test the page — to replace." } },
+    { "id": "fb-pickup", "placeholder": true, "category": "feedback", "src": "/media/sound/fb-pickup.mp3",
+      "title": { "fr": "Démo — Ramassage d’objet", "en": "Demo — Item pickup" },
+      "description": { "fr": "Son généré pour tester la page — à remplacer.", "en": "Generated sound to test the page — to replace." } },
+    { "id": "cb-hit", "placeholder": true, "category": "combat", "src": "/media/sound/cb-hit.mp3",
+      "title": { "fr": "Démo — Impact", "en": "Demo — Hit" },
+      "description": { "fr": "Son généré pour tester la page — à remplacer.", "en": "Generated sound to test the page — to replace." } },
+    { "id": "sfx-whoosh", "placeholder": true, "category": "sfx", "src": "/media/sound/sfx-whoosh.mp3",
+      "title": { "fr": "Démo — Souffle", "en": "Demo — Whoosh" },
+      "description": { "fr": "Son généré pour tester la page — à remplacer.", "en": "Generated sound to test the page — to replace." } },
+    { "id": "amb-cave", "placeholder": true, "category": "ambience", "src": "/media/sound/amb-cave.mp3",
+      "title": { "fr": "Démo — Ambiance grotte", "en": "Demo — Cave ambience" },
+      "description": { "fr": "Son généré pour tester la page — à remplacer.", "en": "Generated sound to test the page — to replace." } }
+  ],
+  "comparisons": [
+    {
+      "id": "demo-ab-hit",
+      "placeholder": true,
+      "title": { "fr": "Démo — Impact avec / sans Sound Design", "en": "Demo — Hit with / without sound design" },
+      "description": { "fr": "Exemple de comparaison A/B. Remplace par une vidéo de ton jeu (deux versions synchronisées).", "en": "Sample A/B comparison. Replace with a video of your game (two synced versions)." },
+      "media": "audio",
+      "without": "/media/sound/ab-hit-without.mp3",
+      "with": "/media/sound/ab-hit-with.mp3"
+    }
+  ],
+  "videos": [
+    {
+      "id": "demo-video",
+      "placeholder": true,
+      "title": { "fr": "Emplacement — Vidéo de démonstration", "en": "Slot — Demo video" },
+      "description": { "fr": "Ajoute ici une vidéo de démonstration sonore (fichier mp4 ou lien YouTube).", "en": "Add a sound demo video here (mp4 file or YouTube link)." },
+      "src": null
+    }
+  ]
+}

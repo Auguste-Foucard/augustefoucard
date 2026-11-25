@@ -1,0 +1,31 @@
+[
+  {
+    "slug": "voice-move",
+    "title": { "fr": "Déplacement à la voix", "en": "Voice-driven movement" },
+    "placeholder": true,
+    "year": null,
+    "tags": ["Microphone", "Input", "Prototype"],
+    "accent": "#8b5cf6",
+    "cover": null,
+    "interactive": "voice-move",
+    "summary": {
+      "fr": "Piloter un personnage uniquement avec la voix : la hauteur de la note le fait avancer, un son fort le fait sauter.",
+      "en": "Control a character with your voice only: pitch moves it, a loud sound makes it jump."
+    },
+    "body": {
+      "fr": "Version web de démonstration intégrée au site pour montrer le principe. [À compléter avec ton expérimentation, tes notes de recherche et ce que tu en as tiré.]",
+      "en": "Web demo built into the site to show the idea. [To complete with your own experiment, research notes and takeaways.]"
+    }
+  },
+  {
+    "slug": "exemple-experience",
+    "title": { "fr": "Exemple — Expérimentation", "en": "Sample — Experiment" },
+    "placeholder": true,
+    "year": null,
+    "tags": ["Game Design"],
+    "accent": "#c084fc",
+    "cover": null,
+    "summary": { "fr": "[Entrée d’exemple à remplacer]", "en": "[Sample entry to replace]" },
+    "body": { "fr": "[À compléter] Tu peux aussi intégrer un prototype web via le champ « embed ».", "en": "[To be written] You can also embed a web prototype with the “embed” field." }
+  }
+]

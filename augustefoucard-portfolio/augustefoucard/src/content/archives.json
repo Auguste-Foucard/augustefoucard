@@ -1,0 +1,38 @@
+[
+  {
+    "id": "exemple-game-jam",
+    "title": "Exemple — Game Jam",
+    "placeholder": true,
+    "year": 2025,
+    "kind": "jam",
+    "description": { "fr": "[Entrée d’exemple à remplacer] Thème, durée, équipe, ce que tu as appris.", "en": "[Sample entry to replace] Theme, duration, team, what you learned." },
+    "cover": null, "video": null, "links": []
+  },
+  {
+    "id": "exemple-prototype",
+    "title": "Exemple — Prototype",
+    "placeholder": true,
+    "year": 2024,
+    "kind": "prototype",
+    "description": { "fr": "[Entrée d’exemple à remplacer] Une idée testée rapidement.", "en": "[Sample entry to replace] A quickly tested idea." },
+    "cover": null, "video": null, "links": []
+  },
+  {
+    "id": "exemple-projet-etudiant",
+    "title": "Exemple — Projet étudiant",
+    "placeholder": true,
+    "year": 2023,
+    "kind": "student",
+    "description": { "fr": "[Entrée d’exemple à remplacer] Contexte pédagogique et résultat.", "en": "[Sample entry to replace] Course context and outcome." },
+    "cover": null, "video": null, "links": []
+  },
+  {
+    "id": "exemple-experimental",
+    "title": "Exemple — Projet abandonné",
+    "placeholder": true,
+    "year": 2022,
+    "kind": "experimental",
+    "description": { "fr": "[Entrée d’exemple à remplacer] Pourquoi le projet s’est arrêté, ce qu’il t’a appris.", "en": "[Sample entry to replace] Why it stopped and what it taught you." },
+    "cover": null, "video": null, "links": []
+  }
+]

@@ -1,0 +1,17 @@
+type P = { size?: number };
+const s = (size = 20) => ({ width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true });
+export const Play = ({ size }: P) => <svg {...s(size)}><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none" /></svg>;
+export const Pause = ({ size }: P) => <svg {...s(size)}><rect x="6" y="4.5" width="4" height="15" rx="1" fill="currentColor" stroke="none" /><rect x="14" y="4.5" width="4" height="15" rx="1" fill="currentColor" stroke="none" /></svg>;
+export const Next = ({ size }: P) => <svg {...s(size)}><path d="M5 5v14l10-7z" fill="currentColor" stroke="none" /><path d="M18 5v14" /></svg>;
+export const Prev = ({ size }: P) => <svg {...s(size)}><path d="M19 5v14L9 12z" fill="currentColor" stroke="none" /><path d="M6 5v14" /></svg>;
+export const Volume = ({ size }: P) => <svg {...s(size)}><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" stroke="none" /><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" /></svg>;
+export const Mute = ({ size }: P) => <svg {...s(size)}><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" stroke="none" /><path d="m16 9.5 5 5m0-5-5 5" /></svg>;
+export const Arrow = ({ size }: P) => <svg {...s(size)}><path d="M5 12h14m-5-5 5 5-5 5" /></svg>;
+export const ArrowUpRight = ({ size }: P) => <svg {...s(size)}><path d="M7 17 17 7m-8 0h8v8" /></svg>;
+export const Close = ({ size }: P) => <svg {...s(size)}><path d="m6 6 12 12M18 6 6 18" /></svg>;
+export const ChevronUp = ({ size }: P) => <svg {...s(size)}><path d="m6 15 6-6 6 6" /></svg>;
+export const ChevronDown = ({ size }: P) => <svg {...s(size)}><path d="m6 9 6 6 6-6" /></svg>;
+export const Expand = ({ size }: P) => <svg {...s(size)}><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>;
+export const Shrink = ({ size }: P) => <svg {...s(size)}><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>;
+export const Mic = ({ size }: P) => <svg {...s(size)}><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" /></svg>;
+export const Download = ({ size }: P) => <svg {...s(size)}><path d="M12 4v11m-5-5 5 5 5-5M5 20h14" /></svg>;
