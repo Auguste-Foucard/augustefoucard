@@ -71,7 +71,7 @@ export function newState() {
     up: Object.fromEntries(UPGRADES.map((u) => [u.id, 0])),
     forms: {}, combos: {}, power: 'filaments',
     universe: { stars: [], flowers: [], galaxies: [], loops: [], constellations: [], auroras: [], nebula: [] },
-    settings: { sound: 0.8, music: 0.55, haptics: true, intensity: 1, palette: 'aurora', reduced: false, night: false, lang: null },
+    settings: { sound: 0.7, music: 0.6, haptics: true, intensity: 1, palette: 'aurora', reduced: false, night: false, lang: null },
     stats: { strokes: 0, created: 0, time: 0 },
     seen: {}, lastSeen: Date.now(),
   };

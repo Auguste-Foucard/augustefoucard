@@ -11,6 +11,8 @@ const CHORDS = [ // accords de la nappe (MIDI) : D, Bm7, Gmaj9, A6sus
   [43, 50, 57, 59, 66],
   [45, 52, 57, 59, 64],
 ];
+// Niveau général volontairement doux : le jeu se joue souvent au casque ou au calme.
+const MASTER = 0.55; const PAD = 0.2;
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 export const degreeToMidi = (d) => { const o = Math.floor(d / 5); const i = ((d % 5) + 5) % 5; return ROOT + o * 12 + PENTA[i]; };
 
@@ -39,8 +41,8 @@ class Audio {
 
   build() {
     const c = this.ctx;
-    this.master = c.createGain(); this.master.gain.value = this.vol;
-    const comp = c.createDynamicsCompressor(); comp.threshold.value = -18; comp.knee.value = 24; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.4;
+    this.master = c.createGain(); this.master.gain.value = this.vol * this.vol * MASTER;
+    const comp = c.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 18; comp.ratio.value = 6; comp.attack.value = 0.01; comp.release.value = 0.4;
     this.master.connect(comp); comp.connect(c.destination);
     // Filtre global (adouci en mode nuit).
     this.tone = c.createBiquadFilter(); this.tone.type = 'lowpass'; this.tone.frequency.value = 12000; this.tone.connect(this.master);
@@ -56,7 +58,7 @@ class Audio {
     this.delayIn = c.createGain(); this.delayIn.gain.value = 0.12;
     this.delayIn.connect(this.delay); this.delay.connect(dLp); dLp.connect(this.fb); this.fb.connect(this.delay); dLp.connect(this.verbIn); dLp.connect(this.dry);
     // Bus des nappes.
-    this.padBus = c.createGain(); this.padBus.gain.value = this.musicVol * 0.32;
+    this.padBus = c.createGain(); this.padBus.gain.value = this.musicVol * this.musicVol * PAD;
     this.padLp = c.createBiquadFilter(); this.padLp.type = 'lowpass'; this.padLp.frequency.value = 900; this.padLp.Q.value = 0.4;
     this.padBus.connect(this.padLp); this.padLp.connect(this.verbIn); this.padLp.connect(this.dry);
     // LFO lent sur le filtre de la nappe : respiration.
@@ -69,8 +71,8 @@ class Audio {
     return b;
   }
 
-  setVolume(v) { this.vol = v; if (this.master) this.master.gain.setTargetAtTime(v * (this.night ? 0.55 : 1), this.ctx.currentTime, 0.1); }
-  setMusic(v) { this.musicVol = v; if (this.padBus) this.padBus.gain.setTargetAtTime(v * 0.32 * (this.night ? 0.7 : 1), this.ctx.currentTime, 0.3); }
+  setVolume(v) { this.vol = v; if (this.master) this.master.gain.setTargetAtTime(v * v * MASTER * (this.night ? 0.55 : 1), this.ctx.currentTime, 0.1); }
+  setMusic(v) { this.musicVol = v; if (this.padBus) this.padBus.gain.setTargetAtTime(v * v * PAD * (this.night ? 0.7 : 1), this.ctx.currentTime, 0.3); }
   setNight(n) {
     this.night = n; if (!this.ctx) return;
     this.tone.frequency.setTargetAtTime(n ? 2600 : 12000, this.ctx.currentTime, 0.5);
@@ -85,8 +87,8 @@ class Audio {
   }
   /** Gonfle doucement la nappe (respiration guidée, réactions). */
   swell(amount, dur = 3) {
-    if (!this.ctx) return; const t = this.ctx.currentTime; const g = this.padBus.gain; const base = this.musicVol * 0.32 * (this.night ? 0.7 : 1);
-    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(base * (1 + amount), t + dur * 0.4); g.linearRampToValueAtTime(base, t + dur);
+    if (!this.ctx) return; const t = this.ctx.currentTime; const g = this.padBus.gain; const base = this.musicVol * this.musicVol * PAD * (this.night ? 0.7 : 1);
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(base * (1 + amount * 0.6), t + dur * 0.4); g.linearRampToValueAtTime(base, t + dur);
     this.padLp.frequency.setTargetAtTime(900 + amount * 900, t, dur * 0.25); this.padLp.frequency.setTargetAtTime(900, t + dur * 0.5, dur * 0.4);
   }
 
@@ -120,7 +122,7 @@ class Audio {
   /** Joue une note pentatonique. kind : kalimba | harp | crystal | piano | bell | drop | glass */
   note(degree, { kind = 'kalimba', vel = 0.6, pan = 0, delay = 0, dur = 1 } = {}) {
     if (!this.ok || this.vol <= 0 || !this.ctx || this.ctx.state !== 'running') return;
-    if (this.voices > 26) return;
+    if (this.voices > 18) return;
     const c = this.ctx; const t = c.currentTime + 0.005 + delay;
     const f = mtof(degreeToMidi(degree));
     const out = c.createGain(); out.gain.value = 0;
@@ -139,7 +141,7 @@ class Audio {
     }[kind] || [[1, 1, 'sine', 1]];
     const decay = { kalimba: 1.4, harp: 2.2, crystal: 2.6, glass: 1.8, piano: 2.4, bell: 4.5, drop: 0.5 }[kind] * dur;
     const atk = kind === 'harp' ? 0.004 : kind === 'bell' ? 0.003 : 0.002;
-    out.gain.linearRampToValueAtTime(v * 0.22, t + atk);
+    out.gain.linearRampToValueAtTime(v * 0.16, t + atk);
     out.gain.setTargetAtTime(0, t + atk, decay / 4);
     const oscs = [];
     for (const [r, gn, type, df] of parts) {
@@ -159,14 +161,14 @@ class Audio {
   /** Note jouée pendant le tracé : hauteur selon la position, timbre selon la vitesse. */
   gesture(yNorm, speed, pan, power = 'filaments') {
     if (!this.ctx) return;
-    const now = performance.now(); const gap = speed > 1.4 ? 70 : speed > 0.6 ? 110 : 170;
+    const now = performance.now(); const gap = speed > 1.4 ? 95 : speed > 0.6 ? 140 : 200;
     if (now - this.lastNote < gap) return;
     this.lastNote = now;
     let d = Math.round((1 - yNorm) * 12) + 2; // 3 octaves sur la hauteur de l'écran
     // Attirance douce vers les notes de l'accord en cours.
     if (this.currentChord && Math.random() < 0.35) d += Math.random() < 0.5 ? 0 : 5 * (Math.random() < 0.5 ? 1 : -1);
     const kind = power === 'water' ? 'drop' : power === 'kaleido' ? 'harp' : speed > 1.6 ? 'crystal' : speed > 0.7 ? 'kalimba' : 'harp';
-    this.note(d, { kind, vel: clamp(0.35 + speed * 0.25, 0.3, 0.85), pan });
+    this.note(d, { kind, vel: clamp(0.28 + speed * 0.18, 0.25, 0.6), pan });
   }
 
   /** Signature sonore d'une forme qui prend vie. */
@@ -185,7 +187,7 @@ class Audio {
       galaxy: [[0, 0], [5, 0.2], [10, 0.4], [15, 0.6], [20, 0.8]],
     }[id] || [[7, 0]];
     const kind = { line: 'kalimba', circle: 'crystal', wave: 'harp', spiral: 'glass', triangle: 'crystal', star: 'bell', flower: 'harp', heart: 'piano', infinity: 'kalimba', mandala: 'harp', galaxy: 'bell' }[id] || 'kalimba';
-    for (const [d, dl] of seqs) this.note(d, { kind, vel: 0.55, pan: pan * 0.6, delay: dl });
+    for (const [d, dl] of seqs) this.note(d, { kind, vel: 0.42, pan: pan * 0.6, delay: dl });
     if (id === 'heart') this.thump();
   }
 
@@ -193,7 +195,7 @@ class Audio {
     if (!this.ok || !this.ctx) return; const c = this.ctx; const t = c.currentTime + delay;
     for (const dt of [0, 0.22]) {
       const o = c.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(90, t + dt); o.frequency.exponentialRampToValueAtTime(48, t + dt + 0.25);
-      const g = c.createGain(); g.gain.setValueAtTime(0, t + dt); g.gain.linearRampToValueAtTime(0.25 * (this.night ? 0.5 : 1), t + dt + 0.01); g.gain.setTargetAtTime(0, t + dt + 0.02, 0.09);
+      const g = c.createGain(); g.gain.setValueAtTime(0, t + dt); g.gain.linearRampToValueAtTime(0.13 * (this.night ? 0.5 : 1), t + dt + 0.01); g.gain.setTargetAtTime(0, t + dt + 0.02, 0.09);
       o.connect(g); g.connect(this.dry); o.start(t + dt); o.stop(t + dt + 0.6);
     }
   }
@@ -202,12 +204,12 @@ class Audio {
   reaction(big = false) {
     const base = pick([0, 2, 3]);
     const seq = big ? [0, 2, 4, 5, 7, 9, 10, 12, 14] : [0, 2, 4, 5, 7];
-    seq.forEach((d, i) => this.note(base + d + 5, { kind: i % 2 ? 'crystal' : 'bell', vel: 0.45, pan: Math.sin(i) * 0.6, delay: i * 0.07 }));
+    seq.forEach((d, i) => this.note(base + d + 5, { kind: i % 2 ? 'crystal' : 'bell', vel: 0.32, pan: Math.sin(i) * 0.6, delay: i * 0.07 }));
     this.swell(big ? 0.9 : 0.5, big ? 5 : 3);
   }
 
   levelUp() {
-    [0, 4, 7, 9, 12, 14].forEach((d, i) => this.note(d + 3, { kind: 'bell', vel: 0.5, pan: (i - 2.5) * 0.25, delay: i * 0.12 }));
+    [0, 4, 7, 9, 12, 14].forEach((d, i) => this.note(d + 3, { kind: 'bell', vel: 0.36, pan: (i - 2.5) * 0.25, delay: i * 0.12 }));
     this.swell(1, 6);
   }
 
@@ -221,7 +223,7 @@ class Audio {
     if (!this.ok || !this.ctx) return; const c = this.ctx; const t = c.currentTime;
     if (!this._noise) { const len = c.sampleRate; const b = c.createBuffer(1, len, c.sampleRate); const d = b.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1; this._noise = b; }
     const s = c.createBufferSource(); s.buffer = this._noise; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 2.5;
-    const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel * 0.15, t + 0.25); g.gain.linearRampToValueAtTime(0, t + 0.9);
+    const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel * 0.08, t + 0.25); g.gain.linearRampToValueAtTime(0, t + 0.9);
     s.connect(f); f.connect(g); g.connect(this.verbIn); g.connect(this.dry); s.start(t); s.stop(t + 1);
   }
 

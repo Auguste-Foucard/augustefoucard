@@ -1,5 +1,5 @@
 // Fonctionnement hors connexion : tout le jeu est mis en cache à l'installation.
-const CACHE = 'aura-v1';
+const CACHE = 'aura-v2';
 const FILES = ['./', './index.html', './aura.css', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/apple-touch-icon.png',
   './js/main.js', './js/util.js', './js/i18n.js', './js/economy.js', './js/audio.js', './js/shapes.js', './js/fx.js', './js/creations.js', './js/reactions.js', './js/universe.js', './js/powers.js', './js/haptics.js', './js/ui.js'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
