@@ -1,0 +1,6 @@
+# Secrets pour tester la fonction /api/contact en local avec `npx wrangler pages dev dist`.
+# Copie ce fichier en .dev.vars (il n'est jamais envoyé sur GitHub).
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+RESEND_API_KEY=
+CONTACT_TO=
+CONTACT_FROM=Portfolio <contact@augustefoucard.fr>
