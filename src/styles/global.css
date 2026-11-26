@@ -924,7 +924,7 @@ html[data-page='about'] .sky { background: radial-gradient(70% 40% at 82% 88%, r
 .hero2 { position: relative; min-height: 100svh; display: grid; place-items: center; overflow: hidden; isolation: isolate; }
 .land { position: absolute; inset: 0; z-index: 0; overflow: hidden; --mx: 0; --my: 0; }
 .land__defs { position: absolute; width: 1px; height: 1px; overflow: hidden; }
-.land__layer { position: absolute; inset: -3%; will-change: transform; transform: translate3d(calc(var(--mx) * var(--k) * -1px), calc(var(--my) * var(--k) * -0.6px), 0); }
+.land__layer { position: absolute; inset: -3%; will-change: transform; transform: translate3d(calc(var(--mx) * var(--k) * -1px), calc(var(--my) * var(--k) * -0.6px + var(--sy, 0) * (28 - var(--k)) * 5px), 0); }
 .land__layer svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .land__img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .land__drift { animation: af-drift-a 140s ease-in-out infinite alternate; }
@@ -1099,3 +1099,16 @@ html[data-contemplate] .lineart, html[data-contemplate] .swirl { display: none; 
 .musiclines { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
 html[data-contemplate] .musiclines { display: none; }
 @media (prefers-reduced-motion: reduce) { .musiclines { display: none; } }
+
+/* V4.5 — game feel : profondeur au défilement, appui, aimant, inclinaison */
+.land { scale: calc(1 + var(--sy, 0) * 0.04); transform-origin: 50% 100%; }
+.hero2__inner { translate: 0 calc(var(--sy, 0) * -56px); filter: opacity(calc(1 - var(--sy, 0) * 1.5)); }
+.hero2__down { filter: opacity(calc(1 - var(--sy, 0) * 3)); }
+.btn, .filter2, .music-btn, .gcard2__link, .header .menu-btn { transition-property: color, background, border-color, box-shadow, transform, translate, scale, opacity; }
+.btn:active, .filter2:active, .music-btn:active, .gcard2:not(.gcard2--slot) .gcard2__link:active { scale: 0.965; transition-duration: 0.12s; }
+.btn--glow:active { box-shadow: 0 0 56px 4px rgba(230, 184, 101, 0.75), inset 0 0 28px -4px rgba(255, 226, 160, 0.85); }
+.btn, .filter2, .music-btn { transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+.gcard2:not(.gcard2--slot) .gcard2__link { transform: perspective(900px) translateY(var(--ty, 0px)) rotateX(calc(var(--ry, 0) * 1deg)) rotateY(calc(var(--rx, 0) * 1deg)); transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.4s, box-shadow 0.4s, scale 0.15s; }
+.gcard2:not(.gcard2--slot) .gcard2__link:hover { --ty: -4px; }
+@media (hover: none) { .gcard2:not(.gcard2--slot) .gcard2__link:active { box-shadow: 0 0 40px -6px rgba(230, 184, 101, 0.6); } }
+@media (prefers-reduced-motion: reduce) { .land, .hero2__inner, .hero2__down { scale: none; translate: none; filter: none; } .gcard2:not(.gcard2--slot) .gcard2__link { transform: none; } }

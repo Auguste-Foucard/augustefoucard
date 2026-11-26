@@ -27,7 +27,7 @@ export type PlayConfig = {
   orientation?: 'landscape' | 'portrait';
 };
 
-export type GameCategory = 'impact' | 'rpg' | 'mobile' | 'experiment';
+export type GameCategory = 'impact' | 'mobile' | 'experiment';
 
 export type Game = {
   slug: string;

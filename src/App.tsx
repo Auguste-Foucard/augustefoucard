@@ -12,6 +12,7 @@ import { Contemplate } from './components/Contemplate';
 import { LineArt } from './components/LineArt';
 import { PortalSwirl } from './components/PortalSwirl';
 import { MusicLines } from './components/MusicLines';
+import { initFeel } from './lib/feel';
 import Home from './pages/Home';
 
 const Games = lazy(() => import('./pages/Games'));
@@ -47,6 +48,7 @@ function Shell() {
   useEffect(() => {
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   }, []);
+  useEffect(() => initFeel(), []);
 
   return (
     <>

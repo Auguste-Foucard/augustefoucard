@@ -8,11 +8,11 @@ import type { UIKey } from '../i18n/ui';
 import { asset } from '../lib/util';
 import { EASE, Reveal } from './Motion';
 import { Media } from './Media';
-import { Flask, Gamepad, Heart, Phone, Swords } from './Icons';
+import { Flask, Gamepad, Heart, Phone } from './Icons';
 
 type F = 'all' | GameCategory;
-const CATS: F[] = ['all', 'impact', 'rpg', 'mobile', 'experiment'];
-export const CAT_ICON = { all: Gamepad, impact: Heart, rpg: Swords, mobile: Phone, experiment: Flask };
+const CATS: F[] = ['all', 'impact', 'mobile', 'experiment'];
+export const CAT_ICON = { all: Gamepad, impact: Heart, mobile: Phone, experiment: Flask };
 
 export function CategoryChips({ list }: { list: GameCategory[] }) {
   const { t } = useLang();

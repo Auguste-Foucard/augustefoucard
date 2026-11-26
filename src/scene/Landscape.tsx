@@ -48,6 +48,31 @@ export function Landscape({ image }: { image?: string | null }) {
     return () => { cancelAnimationFrame(raf); window.removeEventListener('pointermove', move); };
   }, [still]);
 
+  // Téléphone : le paysage suit l'inclinaison de l'appareil (Android directement ; iOS après le premier toucher)
+  useEffect(() => {
+    if (still || window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    const el = box.current!;
+    let tx = 0, ty = 0, x = 0, y = 0, raf = 0, on = false;
+    const loop = () => {
+      x += (tx - x) * 0.08; y += (ty - y) * 0.08;
+      el.style.setProperty('--mx', x.toFixed(3)); el.style.setProperty('--my', y.toFixed(3));
+      raf = requestAnimationFrame(loop);
+    };
+    const orient = (e: DeviceOrientationEvent) => {
+      if (e.gamma == null || e.beta == null) return;
+      tx = Math.max(-0.5, Math.min(0.5, e.gamma / 40));
+      ty = Math.max(-0.5, Math.min(0.5, (e.beta - 55) / 50));
+    };
+    const start = () => { if (on) return; on = true; window.addEventListener('deviceorientation', orient, { passive: true }); raf = requestAnimationFrame(loop); };
+    const DOE = (window as unknown as { DeviceOrientationEvent?: { requestPermission?: () => Promise<string> } }).DeviceOrientationEvent;
+    let ask: (() => void) | null = null;
+    if (DOE && typeof DOE.requestPermission === 'function') {
+      ask = () => { DOE.requestPermission!().then((r) => { if (r === 'granted') start(); }).catch(() => {}); window.removeEventListener('pointerdown', ask!); };
+      window.addEventListener('pointerdown', ask, { passive: true });
+    } else start();
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('deviceorientation', orient); if (ask) window.removeEventListener('pointerdown', ask); };
+  }, [still]);
+
   const W = Math.round(Math.min(2600, Math.max(420, (H * dim.w) / dim.h)));
   const narrow = W < 900;
 
