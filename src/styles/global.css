@@ -1094,3 +1094,8 @@ html[data-page='about'] .sky { background: radial-gradient(70% 40% at 82% 88%, r
 .swirl { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 60; pointer-events: none; display: none; }
 html[data-contemplate] .lineart, html[data-contemplate] .swirl { display: none; }
 @media (prefers-reduced-motion: reduce) { .lineart, .swirl { display: none; } }
+
+/* V4.4 — musique qui dessine */
+.musiclines { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
+html[data-contemplate] .musiclines { display: none; }
+@media (prefers-reduced-motion: reduce) { .musiclines { display: none; } }

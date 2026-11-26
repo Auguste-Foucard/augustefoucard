@@ -11,6 +11,7 @@ import { Sky } from './components/Sky';
 import { Contemplate } from './components/Contemplate';
 import { LineArt } from './components/LineArt';
 import { PortalSwirl } from './components/PortalSwirl';
+import { MusicLines } from './components/MusicLines';
 import Home from './pages/Home';
 
 const Games = lazy(() => import('./pages/Games'));
@@ -50,6 +51,7 @@ function Shell() {
   return (
     <>
       <Sky />
+      <MusicLines />
       <LineArt />
       <Contemplate />
       <a href="#main" className="skip-link">{t('nav.skip')}</a>
