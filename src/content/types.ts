@@ -23,6 +23,8 @@ export type PlayConfig = {
   url: string;
   /** Ratio d'affichage de l'iframe, ex. "16/9" ou "9/16". */
   aspect?: string;
+  /** Ratio sur téléphone (écran étroit), ex. "3/4" pour un jeu pensé pour le portrait. */
+  aspectMobile?: string;
   /** Orientation conseillée sur mobile. */
   orientation?: 'landscape' | 'portrait';
 };

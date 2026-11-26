@@ -44,7 +44,7 @@ export function GameEmbed({ play, title, seed, accent }: { play: PlayConfig; tit
 
   return (
     <div>
-      <div ref={box} className={`player-embed${fs && !native ? ' is-pseudo-fs' : ''}`} style={{ aspectRatio: fs ? undefined : play.aspect ?? '16/9' }}>
+      <div ref={box} className={`player-embed${fs && !native ? ' is-pseudo-fs' : ''}`} data-ar-m={play.aspectMobile ? '' : undefined} style={{ aspectRatio: fs ? undefined : play.aspect ?? '16/9', ['--ar-m' as string]: play.aspectMobile }}>
         {loaded ? (
           <iframe src={play.url} title={title} allow="fullscreen; autoplay; gamepad; microphone; accelerometer; gyroscope" allowFullScreen loading="lazy" />
         ) : (

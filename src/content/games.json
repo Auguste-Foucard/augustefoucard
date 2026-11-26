@@ -1,1 +1,49 @@
-[]
+[
+  {
+    "slug": "aura",
+    "title": "AURA",
+    "featured": true,
+    "categories": ["experiment", "mobile"],
+    "accent": "#c9b8ff",
+    "genre": { "fr": "Jeu incrémental sensoriel et contemplatif", "en": "Sensory, contemplative incremental game" },
+    "year": 2026,
+    "role": { "fr": "Game Design, Sound Design", "en": "Game Design, Sound Design" },
+    "status": "prototype",
+    "cover": "/media/games/aura/cover.webp",
+    "video": null,
+    "summary": {
+      "fr": "Un clicker où l’on ne clique pas : on dessine avec le doigt pour faire naître la lumière. Chaque forme prend vie, chaque geste devient musique, et un univers personnel grandit à mesure qu’on joue.",
+      "en": "A clicker without clicking: you draw with your finger to bring light to life. Every shape awakens, every gesture becomes music, and a personal universe grows as you play."
+    },
+    "concept": {
+      "fr": "AURA mêle jeu incrémental, expérience artistique et moment de détente. Le joueur trace des formes (lignes, cercles, vagues, spirales, triangles, étoiles, fleurs, cœurs, infinis…) reconnues de façon très permissive : même un dessin imparfait produit quelque chose de beau et rapporte de la Lumière. Cette Lumière fait évoluer son pouvoir créatif, et ses créations s’installent peu à peu dans un univers qui reste, tourne et chante quand il revient.",
+      "en": "AURA blends an incremental game, an interactive art piece and a moment of calm. You draw shapes (lines, circles, waves, spirals, triangles, stars, flowers, hearts, infinity…) recognised very generously: even an imperfect drawing yields something beautiful and earns Light. That Light grows your creative power, and your creations gradually settle into a universe that stays, turns and sings when you come back."
+    },
+    "mechanics": [
+      { "fr": "Dessin au doigt et reconnaissance de 11 formes, chacune avec son animation, sa signature sonore et sa valeur en Lumière.", "en": "Finger drawing with 11 recognised shapes, each with its own animation, sound signature and Light value." },
+      { "fr": "Cinq pouvoirs sensoriels : filaments, feux d’artifice (accumuler puis libérer), eau, magnétisme et kaléidoscope.", "en": "Five sensory powers: filaments, fireworks (gather then release), water, magnetism and kaleidoscope." },
+      { "fr": "Dix harmonies secrètes à découvrir en faisant réagir les formes entre elles (constellation, aurore boréale, vortex galactique…).", "en": "Ten secret harmonies to discover by making shapes react together (constellation, northern lights, galactic vortex…)." },
+      { "fr": "Un arbre d’évolution en trois branches dont chaque niveau change visiblement ou audiblement l’expérience.", "en": "A three-branch evolution tree where every level visibly or audibly changes the experience." },
+      { "fr": "Un univers persistant (étoiles, fleurs, galaxies, nébuleuse) qui produit un peu de Lumière au repos, sans jamais pénaliser l’absence.", "en": "A persistent universe (stars, flowers, galaxies, nebula) that gently produces Light at rest, never punishing absence." },
+      { "fr": "Mode libre sans interface, contemplation, respiration guidée, mode avant de dormir, mouvements réduits.", "en": "Interface-free mode, contemplation, guided breathing, bedtime mode, reduced motion." }
+    ],
+    "intentions": {
+      "fr": "Retrouver la satisfaction de progression d’un clicker sans ses mécaniques stressantes : aucune défaite, aucun chronomètre, aucune obligation quotidienne. Tout le son est synthétisé en temps réel dans une gamme pentatonique pour que même un dessin aléatoire reste musical. Le joueur doit pouvoir quitter le jeu en se sentant apaisé.",
+      "en": "Keep the satisfying progression of a clicker without its stressful mechanics: no failure, no timer, no daily obligation. All sound is synthesised in real time in a pentatonic scale so that even random drawing stays musical. Players should leave feeling soothed."
+    },
+    "work": [
+      { "fr": "Game design, économie et équilibrage de la progression.", "en": "Game design, economy and progression balancing." },
+      { "fr": "Sound design génératif (Web Audio) : notes, nappes, réverbération, réactions.", "en": "Generative sound design (Web Audio): notes, pads, reverb, reactions." },
+      { "fr": "Prototype web jouable, installable sur iPhone et utilisable hors connexion.", "en": "Playable web prototype, installable on iPhone and usable offline." }
+    ],
+    "gallery": [
+      { "src": "/media/games/aura/shot-1.webp", "alt": { "fr": "Trois vagues qui deviennent une aurore boréale", "en": "Three waves turning into northern lights" } },
+      { "src": "/media/games/aura/shot-2.webp", "alt": { "fr": "Étoile, anneau, fleur et infini dans un univers déjà peuplé de galaxies", "en": "Star, ring, flower and infinity in a universe already full of galaxies" } },
+      { "src": "/media/games/aura/shot-3.webp", "alt": { "fr": "Sur iPhone : le jeu, l’arbre d’évolution et la collection", "en": "On iPhone: the game, the evolution tree and the collection" } }
+    ],
+    "play": { "type": "embed", "url": "/play/aura/index.html", "aspect": "16/10", "aspectMobile": "3/4", "orientation": "portrait" },
+    "links": [
+      { "label": { "fr": "Ouvrir AURA en plein écran (à installer sur l’iPhone)", "en": "Open AURA full screen (install it on iPhone)" }, "url": "/play/aura/" }
+    ]
+  }
+]
