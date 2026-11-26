@@ -56,7 +56,7 @@ export default function Home() {
             {t('home.tagline')}
           </motion.p>
           <motion.div className="hero2__cta" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.3, ease: EASE, delay: D(3.0, 0.8) }}>
-            <Button variant="glow" onClick={() => document.getElementById('creations')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' })}>
+            <Button variant="glow" onClick={() => { window.dispatchEvent(new CustomEvent('af:swirl', { detail: { home: true } })); window.setTimeout(() => document.getElementById('creations')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }), 260); }}>
               <Gamepad size={20} /> {t('home.discover')} <span className="btn__arrow"><ChevronRight size={18} /></span>
             </Button>
           </motion.div>

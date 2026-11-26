@@ -9,6 +9,8 @@ import { Dock } from './components/player/Dock';
 import { useLang } from './i18n/lang';
 import { Sky } from './components/Sky';
 import { Contemplate } from './components/Contemplate';
+import { LineArt } from './components/LineArt';
+import { PortalSwirl } from './components/PortalSwirl';
 import Home from './pages/Home';
 
 const Games = lazy(() => import('./pages/Games'));
@@ -48,6 +50,7 @@ function Shell() {
   return (
     <>
       <Sky />
+      <LineArt />
       <Contemplate />
       <a href="#main" className="skip-link">{t('nav.skip')}</a>
       <ReadingProgress />
@@ -72,6 +75,7 @@ function Shell() {
           <Footer />
         </motion.div>
       </AnimatePresence>
+      <PortalSwirl />
       <Dock />
     </>
   );

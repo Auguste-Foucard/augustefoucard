@@ -1088,3 +1088,9 @@ html[data-page='about'] .sky { background: radial-gradient(70% 40% at 82% 88%, r
 .land--still .portal-pulse, .land--still .portal-beam, .land--still .stone, .land--still .aur, .land--still .rays, .land--still .ring { animation: none; }
 @media (prefers-reduced-motion: reduce) { .portal-pulse, .portal-beam, .stone, .aur, .rays, .ring { animation: none; } }
 @media (max-width: 700px) { .aur, .ring { animation: none; } }
+
+/* V4.3 — fil de lumière + portail tourbillon */
+.lineart { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+.swirl { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 60; pointer-events: none; display: none; }
+html[data-contemplate] .lineart, html[data-contemplate] .swirl { display: none; }
+@media (prefers-reduced-motion: reduce) { .lineart, .swirl { display: none; } }
