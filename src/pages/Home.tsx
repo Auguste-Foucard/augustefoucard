@@ -7,6 +7,8 @@ import { Button, EASE } from '../components/Motion';
 import { Collection } from '../components/Collection';
 import { Gamepad, ChevronRight } from '../components/Icons';
 import { Landscape } from '../scene/Landscape';
+import { resolveTheme } from '../scene/themes';
+import { ChimeToggle } from '../components/ChimeToggle';
 import { asset } from '../lib/util';
 
 const INTRO_KEY = 'af-intro-seen';
@@ -24,6 +26,7 @@ export default function Home() {
   const o = useTransform(scrollYProgress, [0, 0.55], [1, 0]);
   const k = first ? 1 : 0.35;
   const D = (a: number, b: number) => (first ? a : b);
+  const starry = !site.hero?.image && resolveTheme(site.hero?.theme) === 'stars';
   const words = ['Auguste', 'Foucard'];
   let n = 0;
 
@@ -65,6 +68,7 @@ export default function Home() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: D(3.6, 1.2), duration: 1.2 }}>
           <svg width="30" height="22" viewBox="0 0 30 22" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 3l11 8 11-8M4 11l11 8 11-8" /></svg>
         </motion.button>
+        {starry && <ChimeToggle delay={D(3.6, 1.2)} />}
       </section>
       <Collection id="creations" />
     </>

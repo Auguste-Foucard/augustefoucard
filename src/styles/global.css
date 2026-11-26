@@ -1173,3 +1173,32 @@ html[data-contemplate] .musiclines { display: none; }
 @keyframes af-shoot2 { 0% { transform: translateX(-160px) scaleX(0.4); opacity: 0; } 2% { opacity: 1; } 8% { transform: translateX(min(60vw, 620px)) scaleX(1); opacity: 0; } 100% { transform: translateX(min(60vw, 620px)); opacity: 0; } }
 .land--still .jewel__glow, .land--still .jewel__spk, .land--still .shoot2 i { animation: none; }
 @media (prefers-reduced-motion: reduce) { .jewel__glow, .jewel__spk, .shoot2 i, .jewel--born { animation: none; } .jewel__glow { opacity: 0.7; } .jewel__spk { opacity: 0.5; } }
+
+/* V5 — constellations à tracer + étoiles sonores */
+.cons { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.cons line { fill: none; stroke-linecap: round; }
+.cons__line { stroke: #f8e6b8; stroke-width: 1.1; stroke-dasharray: 1; stroke-dashoffset: 1; animation: af-draw 0.55s cubic-bezier(.2,.8,.2,1) forwards; }
+.cons__glow { stroke: rgba(243, 210, 140, 0.22); stroke-width: 6; stroke-dasharray: 1; stroke-dashoffset: 1; animation: af-draw 0.55s cubic-bezier(.2,.8,.2,1) forwards; }
+.cons__live { stroke: rgba(248, 230, 184, 0.45); stroke-width: 1; stroke-dasharray: 0.012 0.018; }
+@keyframes af-draw { to { stroke-dashoffset: 0; } }
+.cons__g { transition: opacity 3s ease; }
+.cons__g--done .cons__glow { animation: af-draw 0.55s forwards, af-consglow 1.6s ease-in-out 0.3s 2; }
+@keyframes af-consglow { 50% { stroke: rgba(255, 226, 160, 0.5); stroke-width: 9; } }
+.cons__g--fade { opacity: 0; }
+.chime { position: absolute; z-index: 3; left: var(--gutter); bottom: calc(1.6rem + var(--safe-b, 0px)); display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+.chime__btn { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 40px; padding: 0 0.95rem 0 0.8rem; border-radius: 999px; border: 1px solid rgba(244, 236, 217, 0.14);
+  background: rgba(3, 6, 25, 0.35); color: var(--ink-2); font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; transition: color 0.4s, border-color 0.4s, box-shadow 0.4s; -webkit-tap-highlight-color: transparent; }
+.chime__btn:hover { color: var(--ink); border-color: rgba(244, 236, 217, 0.3); }
+.chime__btn.is-on { color: #f8e6b8; border-color: rgba(243, 210, 140, 0.45); box-shadow: 0 0 18px -6px rgba(243, 210, 140, 0.6); }
+.chime__btn.is-on .chime__w1 { animation: af-wave 1.8s ease-in-out infinite; }
+.chime__btn.is-on .chime__w2 { animation: af-wave 1.8s ease-in-out 0.3s infinite; }
+@keyframes af-wave { 50% { opacity: 0.3; } }
+.chime__hint { margin: 0; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--ink-3); opacity: 0; animation: af-hint 12s ease 5s forwards; }
+@keyframes af-hint { 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@media (max-width: 640px) {
+  .chime { left: 1rem; bottom: calc(1.3rem + var(--safe-b, 0px)); }
+  .chime__btn { min-height: 44px; padding: 0 0.8rem; font-size: 0.66rem; letter-spacing: 0.12em; }
+  .chime__btn span { display: none; }
+  .chime__hint { position: absolute; left: 0; bottom: 100%; margin-bottom: 0.6rem; white-space: nowrap; font-size: 0.68rem; }
+}
+@media (prefers-reduced-motion: reduce) { .cons line { animation: none; stroke-dashoffset: 0; } .chime__hint { animation: none; opacity: 1; } }

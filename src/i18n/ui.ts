@@ -20,6 +20,8 @@ const fr = {
   'placeholder.visual': 'Visuel à venir',
 
   'home.discover': 'Découvrir mes créations',
+  'home.chime': 'Étoiles sonores',
+  'home.hint': 'Touchez les étoiles · reliez-les du bout du doigt',
   'home.creations': 'Mes créations',
   'home.creations.sub': 'Une collection de jeux, d’expériences et de prototypes.',
   'slot.label': 'Prochain projet',
@@ -204,6 +206,8 @@ const en: Record<UIKey, string> = {
   'placeholder.visual': 'Visual coming soon',
 
   'home.discover': 'Explore my work',
+  'home.chime': 'Singing stars',
+  'home.hint': 'Touch the stars · draw lines between them',
   'home.creations': 'My work',
   'home.creations.sub': 'A collection of games, experiences and prototypes.',
   'slot.label': 'Next project',

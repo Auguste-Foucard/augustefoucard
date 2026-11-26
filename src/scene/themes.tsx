@@ -3,6 +3,11 @@ import { Cloud, Gate, rng, ridgePath, ridgePts, smooth, type Pt } from './draw';
 import { Defs, H, L, MOON_PAL, WATER, type Pal } from './shared';
 
 export type Theme = 'moon' | 'aurora' | 'milkyway' | 'sunrise' | 'ink' | 'zen' | 'bluehour' | 'stars';
+/** Décor actif : `?theme=` (aperçu) puis site.hero.theme, sinon la lune. */
+export function resolveTheme(prop?: string | null): Theme {
+  const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search || window.location.hash.split('?')[1] || '').get('theme') : null;
+  return ([q, prop].find((t) => t && (THEMES as string[]).includes(t)) ?? 'moon') as Theme;
+}
 export type AltTheme = Exclude<Theme, 'moon' | 'stars'>;
 export const THEMES: Theme[] = ['moon', 'aurora', 'milkyway', 'sunrise', 'ink', 'zen', 'bluehour', 'stars'];
 

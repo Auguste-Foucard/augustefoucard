@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { BlossomTree, Gate, Cloud, rng, ridgePath, ridgePts, smooth, type Pt } from './draw';
 import { HeroFX } from './HeroFX';
 import { Defs, H, L, WATER } from './shared';
-import { AltScene, THEMES, type Theme } from './themes';
+import { AltScene, resolveTheme } from './themes';
 import { StarScene } from './stars';
 
 
@@ -14,9 +14,7 @@ import { StarScene } from './stars';
  * Si `image` est fourni (illustration finale en .webp/.jpg), elle remplace le dessin vectoriel.
  */
 export function Landscape({ image, theme: themeProp }: { image?: string | null; theme?: string | null }) {
-  // `?theme=aurora|milkyway|sunrise|moon` permet de comparer les décors en direct
-  const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search || window.location.hash.split('?')[1] || '').get('theme') : null;
-  const theme = ([q, themeProp].find((t) => t && (THEMES as string[]).includes(t)) ?? 'moon') as Theme;
+  const theme = resolveTheme(themeProp);
   const box = useRef<HTMLDivElement>(null);
   const [dim, setDim] = useState({ w: 1440, h: 900 });
   const [still, setStill] = useState(false);

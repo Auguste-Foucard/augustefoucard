@@ -61,9 +61,9 @@ export function LineArt() {
         const e = 1 - Math.pow(1 - u, 3), R = (b.strong ? 86 : 56) * e, a = (1 - u) * (b.strong ? 0.75 : 0.55);
         g.lineWidth = 1.2 * (1 - u) + 0.4;
         g.strokeStyle = `rgba(243,217,160,${a.toFixed(3)})`;
-        g.beginPath(); g.arc(b.x, b.y, R, 0, 6.283); g.stroke();
+        g.beginPath(); g.arc(b.x, b.y, Math.max(0, R), 0, 6.283); g.stroke();
         g.strokeStyle = `rgba(190,205,255,${(a * 0.6).toFixed(3)})`;
-        g.beginPath(); g.arc(b.x, b.y, R * 0.62, 0, 6.283); g.stroke();
+        g.beginPath(); g.arc(b.x, b.y, Math.max(0, R * 0.62), 0, 6.283); g.stroke();
         const n = b.strong ? 14 : 9;
         g.strokeStyle = `rgba(255,236,190,${(a * 1.1).toFixed(3)})`;
         g.beginPath();

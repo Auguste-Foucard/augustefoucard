@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { rng, smooth, type Pt } from './draw';
 import { H, L } from './shared';
 import { haptic } from '../lib/feel';
+import { chime } from '../lib/chime';
 
 type Jewel = { x: number; y: number; s: number; d: number; t: number; c: string; r: number };
 const TINTS = ['#ffffff', '#dfe8ff', '#cfdcff', '#fff1d6', '#ffe6c2', '#e8f0ff'];
@@ -30,68 +31,131 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
 
   const box = useRef<HTMLDivElement>(null);
 
-  // Interaction : les étoiles proches du doigt / de la souris s'éveillent ; un tap dans le ciel en fait naître une.
+  // Interaction : les étoiles s'éveillent près du geste ; on les relie en glissant pour tracer des constellations ;
+  // un tap dans le ciel vide fait naître une étoile. Avec le son activé, chaque étoile joue une note.
   useEffect(() => {
     const el = box.current;
     if (!el) return;
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = el.querySelector<SVGSVGElement>('.cons')!;
     let rect = el.getBoundingClientRect();
     const stars = () => Array.from(el.querySelectorAll<HTMLElement>('.jewel'));
-    const onResize = () => { rect = el.getBoundingClientRect(); };
+    const pos = (s: HTMLElement) => [parseFloat(s.style.left), parseFloat(s.style.top)] as const;
+    const toPx = (s: HTMLElement) => { const [x, y] = pos(s); return [rect.left + (x / 100) * rect.width, rect.top + (y / 100) * rect.height] as const; };
+    const toPct = (cx: number, cy: number) => [((cx - rect.left) / rect.width) * 100, ((cy - rect.top) / rect.height) * 100] as const;
+    const hit = (cx: number, cy: number, r: number, not?: HTMLElement | null) => {
+      let best: HTMLElement | null = null, bd = r;
+      for (const s of stars()) { if (s === not) continue; const [sx, sy] = toPx(s); const d = Math.hypot(sx - cx, sy - cy); if (d < bd) { bd = d; best = s; } }
+      return best;
+    };
+    const ring = (s: HTMLElement, vel = 1) => {
+      s.classList.remove('jewel--flare'); void s.offsetWidth; s.classList.add('jewel--flare');
+      const [x, y] = pos(s); chime(y / 100, x / 100, vel); haptic(8);
+    };
+    const line = (g: Element, a: readonly [number, number], b: readonly [number, number], cls: string) => {
+      const l = document.createElementNS(NS, 'line');
+      l.setAttribute('x1', `${a[0]}%`); l.setAttribute('y1', `${a[1]}%`); l.setAttribute('x2', `${b[0]}%`); l.setAttribute('y2', `${b[1]}%`);
+      l.setAttribute('pathLength', '1'); l.setAttribute('class', cls); g.appendChild(l); return l;
+    };
+
+    // — éveil à l'approche
     let raf = 0, px = -1e4, py = -1e4;
     const apply = () => {
-      raf = 0;
+      raf = 0; rect = el.getBoundingClientRect();
       const R = Math.max(110, Math.min(rect.width, rect.height) * 0.22);
-      for (const s of stars()) {
-        const sx = rect.left + (parseFloat(s.style.left) / 100) * rect.width;
-        const sy = rect.top + (parseFloat(s.style.top) / 100) * rect.height;
-        const n = Math.max(0, 1 - Math.hypot(sx - px, sy - py) / R);
-        s.style.setProperty('--near', (n * n).toFixed(3));
-      }
+      for (const s of stars()) { const [sx, sy] = toPx(s); const n = Math.max(0, 1 - Math.hypot(sx - px, sy - py) / R); s.style.setProperty('--near', (n * n).toFixed(3)); }
     };
-    const move = (e: PointerEvent) => { px = e.clientX; py = e.clientY; if (!raf) raf = requestAnimationFrame(apply); };
-    const leave = () => { px = py = -1e4; if (!raf) raf = requestAnimationFrame(apply); };
-    const down = (e: PointerEvent) => {
-      rect = el.getBoundingClientRect();
-      if (e.clientY > rect.bottom || e.clientY < rect.top) return;
-      if ((e.target as Element | null)?.closest?.('a, button, input, textarea, select, label, [role="button"], .header, .menu')) return;
-      // une étoile touchée s'embrase
-      for (const s of stars()) {
-        const sx = rect.left + (parseFloat(s.style.left) / 100) * rect.width;
-        const sy = rect.top + (parseFloat(s.style.top) / 100) * rect.height;
-        if (Math.hypot(sx - e.clientX, sy - e.clientY) < 44) {
-          s.classList.remove('jewel--flare'); void s.offsetWidth; s.classList.add('jewel--flare'); haptic(10); return;
-        }
-      }
-      if (still) return;
-      // sinon, une nouvelle étoile éclot là où l'on a touché, puis s'efface doucement
+    const wake = () => { if (!raf) raf = requestAnimationFrame(apply); };
+
+    // — constellations
+    type Thread = { g: SVGGElement; last: HTMLElement; chain: HTMLElement[]; live: SVGLineElement };
+    let th: Thread | null = null;
+    let tap: { x: number; y: number; t: number } | null = null;
+    const begin = (s: HTMLElement, cx: number, cy: number) => {
+      const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'cons__g'); svg.appendChild(g);
+      const live = line(g, pos(s), toPct(cx, cy), 'cons__live');
+      th = { g, last: s, chain: [s], live };
+      while (svg.childElementCount > 5) svg.firstElementChild?.remove();
+    };
+    const link = (s: HTMLElement) => {
+      if (!th) return;
+      const a = pos(th.last), b = pos(s);
+      th.g.insertBefore(line(th.g, a, b, 'cons__glow'), th.live);
+      th.g.insertBefore(line(th.g, a, b, 'cons__line'), th.live);
+      th.last = s; th.chain.push(s); ring(s, 0.85);
+    };
+    const finish = () => {
+      if (!th) return;
+      const t = th; th = null; t.live.remove();
+      if (t.chain.length < 2) { t.g.remove(); return; }
+      // la constellation se rejoue, puis s'efface doucement
+      t.g.classList.add('cons__g--done');
+      if (t.chain.length >= 3) t.chain.forEach((s, i) => setTimeout(() => { const [x, y] = pos(s); chime(y / 100, x / 100, 0.55); s.classList.remove('jewel--flare'); void s.offsetWidth; s.classList.add('jewel--flare'); }, 350 + i * 170));
+      setTimeout(() => t.g.classList.add('cons__g--fade'), 4200 + t.chain.length * 170);
+      setTimeout(() => t.g.remove(), 7600 + t.chain.length * 170);
+    };
+
+    const spawn = (cx: number, cy: number) => {
       const born = el.querySelectorAll('.jewel--born');
       if (born.length >= 6) born[0].remove();
+      const [x, y] = toPct(cx, cy);
       const j = document.createElement('span');
       j.className = 'jewel jewel--born';
-      j.style.left = `${((e.clientX - rect.left) / rect.width) * 100}%`;
-      j.style.top = `${((e.clientY - rect.top) / rect.height) * 100}%`;
+      j.style.left = `${x}%`; j.style.top = `${y}%`;
       j.style.setProperty('--s', (0.8 + Math.random() * 0.5).toFixed(2));
       j.style.setProperty('--c', TINTS[Math.floor(Math.random() * TINTS.length)]);
       j.style.setProperty('--t', `${5 + Math.random() * 3}s`);
       j.innerHTML = '<span class="jewel__n"><i class="jewel__glow"></i><i class="jewel__spk"></i><i class="jewel__spk jewel__spk--d"></i><i class="jewel__core"></i></span>';
       el.appendChild(j);
-      haptic(6);
-      window.setTimeout(() => j.remove(), 9000);
+      chime(y / 100, x / 100, 0.7); haptic(6);
+      window.setTimeout(() => j.remove(), 12000);
     };
+
+    const down = (e: PointerEvent) => {
+      px = e.clientX; py = e.clientY; wake();
+      rect = el.getBoundingClientRect();
+      if (e.clientY > rect.bottom - rect.height * 0.04 || e.clientY < rect.top) return;
+      if ((e.target as Element | null)?.closest?.('a, button, input, textarea, select, label, [role="button"], .header, .menu, .dock')) return;
+      const s = hit(e.clientX, e.clientY, e.pointerType === 'mouse' ? 30 : 44);
+      if (s) { ring(s); if (!still) begin(s, e.clientX, e.clientY); return; }
+      if (!still) tap = { x: e.clientX, y: e.clientY, t: performance.now() };
+    };
+    const move = (e: PointerEvent) => {
+      px = e.clientX; py = e.clientY; wake();
+      if (tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 12) tap = null;
+      if (!th) return;
+      rect = el.getBoundingClientRect();
+      const p = toPct(e.clientX, e.clientY);
+      th.live.setAttribute('x2', `${p[0]}%`); th.live.setAttribute('y2', `${p[1]}%`);
+      const s = hit(e.clientX, e.clientY, e.pointerType === 'mouse' ? 26 : 38, th.last);
+      if (s) { link(s); const a = pos(s); th.live.setAttribute('x1', `${a[0]}%`); th.live.setAttribute('y1', `${a[1]}%`); }
+    };
+    const up = (e: PointerEvent) => {
+      if (tap && performance.now() - tap.t < 450 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 12) spawn(e.clientX, e.clientY);
+      tap = null; finish();
+    };
+    const cancel = () => { tap = null; finish(); };
+    const leave = () => { px = py = -1e4; wake(); };
+    // pendant un tracé au doigt, on bloque le défilement de la page
+    const tmove = (e: TouchEvent) => { if (th && e.cancelable) e.preventDefault(); };
+    const onResize = () => { rect = el.getBoundingClientRect(); };
+
     window.addEventListener('resize', onResize);
-    window.addEventListener('scroll', onResize, { passive: true });
     window.addEventListener('pointermove', move, { passive: true });
-    window.addEventListener('pointerdown', move, { passive: true });
     window.addEventListener('pointerdown', down, { passive: true });
+    window.addEventListener('pointerup', up, { passive: true });
+    window.addEventListener('pointercancel', cancel, { passive: true });
+    document.addEventListener('touchmove', tmove, { passive: false });
     document.addEventListener('pointerleave', leave);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', onResize);
-      window.removeEventListener('scroll', onResize);
       window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerdown', move);
       window.removeEventListener('pointerdown', down);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
+      document.removeEventListener('touchmove', tmove);
       document.removeEventListener('pointerleave', leave);
     };
   }, [g]);
@@ -122,6 +186,7 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
       </div>
       <div className="land__layer" style={L(6)}>
         <div ref={box} className="jewels">
+          <svg className="cons" aria-hidden="true" />
           {g.jewels.map((j, i) => (
             <span key={i} className="jewel" style={{ left: `${j.x}%`, top: `${j.y}%`, ['--s' as string]: j.s, ['--d' as string]: `${j.d}s`, ['--t' as string]: `${j.t}s`, ['--c' as string]: j.c, ['--rot' as string]: `${j.r}deg` }}>
               <span className="jewel__n"><i className="jewel__glow" /><i className="jewel__spk" /><i className="jewel__spk jewel__spk--d" /><i className="jewel__core" /></span>
