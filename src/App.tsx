@@ -12,7 +12,7 @@ import { Contemplate } from './components/Contemplate';
 import { LineArt } from './components/LineArt';
 import { PortalSwirl } from './components/PortalSwirl';
 import { MusicLines } from './components/MusicLines';
-import { initFeel, LITE } from './lib/feel';
+import { initFeel } from './lib/feel';
 import Home from './pages/Home';
 
 const Games = lazy(() => import('./pages/Games'));
@@ -54,7 +54,7 @@ function Shell() {
     <>
       <Sky />
       <MusicLines />
-      {!LITE && <LineArt />}
+      <LineArt />
       <Contemplate />
       <a href="#main" className="skip-link">{t('nav.skip')}</a>
       <ReadingProgress />

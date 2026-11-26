@@ -1136,3 +1136,40 @@ html[data-contemplate] .musiclines { display: none; }
   .land__layer { will-change: auto; }
   .header, .menu { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 }
+
+/* V4.9 — ciel plus sombre, étoiles-bijoux (animées en transform/opacity uniquement : GPU, légères sur mobile) */
+:root { --bg: #030619; --bg-2: #070d26; --bg-3: #0c1538; }
+.sky { background: radial-gradient(90% 55% at 78% 6%, rgba(40, 60, 140, 0.2), transparent 70%), linear-gradient(180deg, #01030c 0%, #030820 50%, #060f2e 100%); }
+.land__fade { background: linear-gradient(180deg, transparent, #030619 100%); }
+.jewels { position: absolute; inset: 0; pointer-events: none; }
+.jewel { position: absolute; width: 0; height: 0; --near: 0; --s: 1; }
+.jewel__n { position: absolute; left: 0; top: 0; width: 0; height: 0;
+  transform: scale(calc(var(--s) * (1 + var(--near) * 0.9))); transition: transform 0.9s cubic-bezier(.2,.8,.2,1); }
+.jewel__n > i { position: absolute; left: 0; top: 0; display: block; translate: -50% -50%; }
+.jewel__core { width: 3.6px; height: 3.6px; border-radius: 50%; background: #fff; box-shadow: 0 0 4px 1px var(--c, #fff), 0 0 10px 2px color-mix(in srgb, var(--c, #fff) 55%, transparent); }
+.jewel__glow { width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--c, #fff) 55%, transparent) 0%, color-mix(in srgb, var(--c, #fff) 12%, transparent) 30%, transparent 68%);
+  animation: af-jglow var(--t, 6s) ease-in-out var(--d, 0s) infinite; }
+.jewel__spk { width: 64px; height: 64px; rotate: var(--rot, 0deg);
+  background:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--c, #fff) 85%, transparent) 50%, transparent) center / 100% 1px no-repeat,
+    linear-gradient(0deg, transparent, color-mix(in srgb, var(--c, #fff) 85%, transparent) 50%, transparent) center / 1px 100% no-repeat;
+  animation: af-jspk var(--t, 6s) ease-in-out var(--d, 0s) infinite; }
+.jewel__spk--d { width: 30px; height: 30px; rotate: calc(var(--rot, 0deg) + 45deg); opacity: 0.55; animation-duration: calc(var(--t, 6s) * 1.37); }
+.jewel__glow, .jewel__spk { will-change: transform, opacity; }
+@keyframes af-jglow { 0%, 100% { opacity: 0.35; transform: scale(0.8); } 18% { opacity: 0.9; transform: scale(1.08); } 34% { opacity: 0.5; transform: scale(0.9); } 52% { opacity: 1; transform: scale(1.18); } 70% { opacity: 0.45; transform: scale(0.86); } 86% { opacity: 0.75; transform: scale(1); } }
+@keyframes af-jspk { 0%, 100% { opacity: 0.15; transform: scale(0.45); } 20% { opacity: 0.75; transform: scale(0.95); } 36% { opacity: 0.3; transform: scale(0.6); } 54% { opacity: 1; transform: scale(1.15); } 72% { opacity: 0.25; transform: scale(0.55); } 88% { opacity: 0.6; transform: scale(0.85); } }
+.jewel { opacity: calc(0.78 + var(--near) * 0.22); }
+/* étoile touchée : elle s'embrase */
+.jewel--flare .jewel__n { animation: af-flare 1.6s cubic-bezier(.2,.8,.2,1); }
+@keyframes af-flare { 0% { transform: scale(var(--s)); } 18% { transform: scale(calc(var(--s) * 2.6)); } 100% { transform: scale(var(--s)); } }
+/* étoile née d'un tap */
+.jewel--born { animation: af-born 9s ease-out forwards; }
+@keyframes af-born { 0% { opacity: 0; transform: scale(0.2); } 8% { opacity: 1; transform: scale(1.6); } 20% { transform: scale(1); } 70% { opacity: 0.9; } 100% { opacity: 0; transform: scale(0.7); } }
+/* étoiles filantes */
+.shoot2 { position: absolute; width: 0; height: 0; rotate: var(--a); }
+.shoot2 i { position: absolute; left: 0; top: 0; width: 160px; height: 1.6px; border-radius: 2px; opacity: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95)); box-shadow: 0 0 6px rgba(190, 210, 255, 0.6);
+  animation: af-shoot2 var(--st) ease-in var(--sd) infinite; will-change: transform, opacity; }
+@keyframes af-shoot2 { 0% { transform: translateX(-160px) scaleX(0.4); opacity: 0; } 2% { opacity: 1; } 8% { transform: translateX(min(60vw, 620px)) scaleX(1); opacity: 0; } 100% { transform: translateX(min(60vw, 620px)); opacity: 0; } }
+.land--still .jewel__glow, .land--still .jewel__spk, .land--still .shoot2 i { animation: none; }
+@media (prefers-reduced-motion: reduce) { .jewel__glow, .jewel__spk, .shoot2 i, .jewel--born { animation: none; } .jewel__glow { opacity: 0.7; } .jewel__spk { opacity: 0.5; } }
