@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://augustefoucard.fr/</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/en</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/games</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/games"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/games"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/en/games</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/games"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/games"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/archives</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/archives"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/archives"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/en/archives</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/archives"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/archives"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/sound-design</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/sound-design"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/sound-design"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/en/sound-design</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/sound-design"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/sound-design"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/music</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/music"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/music"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/en/music</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/music"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/music"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/lab</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/lab"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/lab"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/en/lab</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/lab"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/lab"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/about</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/about"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/about"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/en/about</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/about"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/about"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/contact</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/contact"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/contact"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/en/contact</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/contact"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/contact"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/lab/voice-move</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/lab/voice-move"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/lab/voice-move"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/en/lab/voice-move</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/lab/voice-move"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/lab/voice-move"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/lab/exemple-experience</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/lab/exemple-experience"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/lab/exemple-experience"/>
+  </url>
+  <url>
+    <loc>https://augustefoucard.fr/en/lab/exemple-experience</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://augustefoucard.fr/lab/exemple-experience"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://augustefoucard.fr/en/lab/exemple-experience"/>
+  </url>
+</urlset>
