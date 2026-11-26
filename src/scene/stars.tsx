@@ -3,7 +3,7 @@ import { rng, smooth, type Pt } from './draw';
 import { H, L } from './shared';
 import { haptic } from '../lib/feel';
 import { chime } from '../lib/chime';
-import { burst } from './fireworks';
+import { Fireworks, randomType } from './fireworks';
 
 type Jewel = { x: number; y: number; s: number; d: number; t: number; c: string; r: number };
 const TINTS = ['#ffffff', '#dfe8ff', '#cfdcff', '#fff1d6', '#ffe6c2', '#e8f0ff'];
@@ -31,6 +31,7 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
   }, [W, narrow]);
 
   const box = useRef<HTMLDivElement>(null);
+  const fwc = useRef<HTMLCanvasElement>(null);
 
   // Interaction : les étoiles s'éveillent près du geste ; on les relie en glissant pour tracer des constellations ;
   // un tap dans le ciel vide fait naître une étoile. Avec le son activé, chaque étoile joue une note.
@@ -40,6 +41,10 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const NS = 'http://www.w3.org/2000/svg';
     const svg = el.querySelector<SVGSVGElement>('.cons')!;
+    const fw = fwc.current && !still ? new Fireworks(fwc.current) : null;
+    let hue = 42; // le trait commence doré puis change de couleur au fil du geste
+    const col = (h: number, l = 78) => `hsl(${Math.round(h) % 360} 92% ${l}%)`;
+    const at = (s: HTMLElement) => { const [sx, sy] = toPx(s); return fw ? fw.local(sx, sy) : [0, 0] as const; };
     let rect = el.getBoundingClientRect();
     const stars = () => Array.from(el.querySelectorAll<HTMLElement>('.jewel'));
     const pos = (s: HTMLElement) => [parseFloat(s.style.left), parseFloat(s.style.top)] as const;
@@ -53,10 +58,11 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
     const ring = (s: HTMLElement, vel = 1) => {
       s.classList.remove('jewel--flare'); void s.offsetWidth; s.classList.add('jewel--flare');
       const [x, y] = pos(s); chime(y / 100, x / 100, vel); haptic(8);
-      burst(el, x, y, vel >= 1 ? 1 : 0.7);
+      if (fw && vel >= 1) { const [lx, ly] = at(s); fw.burst(lx, ly, randomType(), Math.random() * 360, 0.9); }
     };
-    const line = (g: Element, a: readonly [number, number], b: readonly [number, number], cls: string) => {
+    const line = (g: Element, a: readonly [number, number], b: readonly [number, number], cls: string, h = hue) => {
       const l = document.createElementNS(NS, 'line');
+      l.style.stroke = cls === 'cons__glow' ? `hsl(${Math.round(h) % 360} 90% 65% / .28)` : col(h, cls === 'cons__live' ? 82 : 80);
       l.setAttribute('x1', `${a[0]}%`); l.setAttribute('y1', `${a[1]}%`); l.setAttribute('x2', `${b[0]}%`); l.setAttribute('y2', `${b[1]}%`);
       l.setAttribute('pathLength', '1'); l.setAttribute('class', cls); g.appendChild(l); return l;
     };
@@ -71,13 +77,14 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
     const wake = () => { if (!raf) raf = requestAnimationFrame(apply); };
 
     // — constellations
-    type Thread = { g: SVGGElement; last: HTMLElement; chain: HTMLElement[]; live: SVGLineElement };
+    type Thread = { g: SVGGElement; last: HTMLElement; chain: HTMLElement[]; hues: number[]; live: SVGLineElement; lx: number; ly: number };
     let th: Thread | null = null;
     let tap: { x: number; y: number; t: number } | null = null;
     const begin = (s: HTMLElement, cx: number, cy: number) => {
+      hue = 42 + Math.random() * 30;
       const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'cons__g'); svg.appendChild(g);
       const live = line(g, pos(s), toPct(cx, cy), 'cons__live');
-      th = { g, last: s, chain: [s], live };
+      th = { g, last: s, chain: [s], hues: [hue], live, lx: cx, ly: cy };
       while (svg.childElementCount > 5) svg.firstElementChild?.remove();
     };
     const link = (s: HTMLElement) => {
@@ -85,7 +92,8 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
       const a = pos(th.last), b = pos(s);
       th.g.insertBefore(line(th.g, a, b, 'cons__glow'), th.live);
       th.g.insertBefore(line(th.g, a, b, 'cons__line'), th.live);
-      th.last = s; th.chain.push(s); ring(s, 0.85);
+      th.last = s; th.chain.push(s); th.hues.push(hue); ring(s, 0.85);
+      if (fw) { const [lx, ly] = at(s); fw.spark(lx, ly, hue); }
     };
     const finish = () => {
       if (!th) return;
@@ -93,7 +101,7 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
       if (t.chain.length < 2) { t.g.remove(); return; }
       // la constellation se rejoue, puis s'efface doucement
       t.g.classList.add('cons__g--done');
-      if (t.chain.length >= 3) t.chain.forEach((s, i) => setTimeout(() => { const [x, y] = pos(s); chime(y / 100, x / 100, 0.55); burst(el, x, y, 1.35); s.classList.remove('jewel--flare'); void s.offsetWidth; s.classList.add('jewel--flare'); }, 350 + i * 170));
+      if (t.chain.length >= 3) t.chain.forEach((s, i) => setTimeout(() => { const [x, y] = pos(s); chime(y / 100, x / 100, 0.55); if (fw) { const [lx, ly] = at(s); fw.burst(lx, ly, i === t.chain.length - 1 ? 'chrysanthemum' : randomType(), t.hues[i] ?? hue, i === t.chain.length - 1 ? 1.25 : 0.85); } s.classList.remove('jewel--flare'); void s.offsetWidth; s.classList.add('jewel--flare'); }, 350 + i * 260));
       setTimeout(() => t.g.classList.add('cons__g--fade'), 4200 + t.chain.length * 170);
       setTimeout(() => t.g.remove(), 7600 + t.chain.length * 170);
     };
@@ -109,9 +117,9 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
       j.style.setProperty('--c', TINTS[Math.floor(Math.random() * TINTS.length)]);
       j.style.setProperty('--t', `${5 + Math.random() * 3}s`);
       j.innerHTML = '<span class="jewel__n"><i class="jewel__glow"></i><i class="jewel__spk"></i><i class="jewel__spk jewel__spk--d"></i><i class="jewel__core"></i></span>';
-      el.appendChild(j);
-      chime(y / 100, x / 100, 0.7); haptic(6); burst(el, x, y, 0.6);
-      window.setTimeout(() => j.remove(), 12000);
+      const bloom = () => { el.appendChild(j); chime(y / 100, x / 100, 0.7); haptic(10); window.setTimeout(() => j.remove(), 12000); };
+      haptic(4);
+      if (fw) { const [lx, ly] = fw.local(cx, cy); fw.rocket(lx, ly, randomType(), Math.random() * 360, 1.1, bloom); } else bloom();
     };
 
     const down = (e: PointerEvent) => {
@@ -130,6 +138,8 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
       rect = el.getBoundingClientRect();
       const p = toPct(e.clientX, e.clientY);
       th.live.setAttribute('x2', `${p[0]}%`); th.live.setAttribute('y2', `${p[1]}%`);
+      hue += Math.hypot(e.clientX - th.lx, e.clientY - th.ly) * 0.35; th.lx = e.clientX; th.ly = e.clientY;
+      th.live.style.stroke = col(hue, 82);
       const s = hit(e.clientX, e.clientY, e.pointerType === 'mouse' ? 26 : 38, th.last);
       if (s) { link(s); const a = pos(s); th.live.setAttribute('x1', `${a[0]}%`); th.live.setAttribute('y1', `${a[1]}%`); }
     };
@@ -141,7 +151,7 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
     const leave = () => { px = py = -1e4; wake(); };
     // pendant un tracé au doigt, on bloque le défilement de la page
     const tmove = (e: TouchEvent) => { if (th && e.cancelable) e.preventDefault(); };
-    const onResize = () => { rect = el.getBoundingClientRect(); };
+    const onResize = () => { rect = el.getBoundingClientRect(); fw?.resize(); };
 
     window.addEventListener('resize', onResize);
     window.addEventListener('pointermove', move, { passive: true });
@@ -151,7 +161,7 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
     document.addEventListener('touchmove', tmove, { passive: false });
     document.addEventListener('pointerleave', leave);
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(raf); fw?.destroy();
       window.removeEventListener('resize', onResize);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', down);
@@ -198,6 +208,7 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
           <span className="shoot2" style={{ left: '52%', top: '4%', ['--a' as string]: '31deg', ['--sd' as string]: '11s', ['--st' as string]: '21s' }}><i /></span>
         </div>
       </div>
+      <canvas ref={fwc} className="fwc" aria-hidden="true" />
       <div className="land__layer" style={L(22)}>
         <svg viewBox={vb} preserveAspectRatio="xMidYMid slice">
           <rect x="-200" y="760" width={W + 400} height="240" fill="url(#st-hz)" />
