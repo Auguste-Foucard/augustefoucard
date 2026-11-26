@@ -93,7 +93,7 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
       th.g.insertBefore(line(th.g, a, b, 'cons__glow'), th.live);
       th.g.insertBefore(line(th.g, a, b, 'cons__line'), th.live);
       th.last = s; th.chain.push(s); th.hues.push(hue); ring(s, 0.85);
-      if (fw) { const [lx, ly] = at(s); fw.spark(lx, ly, hue); }
+      if (fw) { const [lx, ly] = at(s); fw.burst(lx, ly, Math.random() < 0.5 ? 'rainbow' : Math.random() < 0.5 ? 'crackle' : 'peony', hue, 0.55); }
     };
     const finish = () => {
       if (!th) return;

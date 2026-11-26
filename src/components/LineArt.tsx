@@ -109,7 +109,8 @@ export function LineArt() {
     window.addEventListener('touchmove', tmove, { passive: true });
     window.addEventListener('touchend', end, { passive: true });
     window.addEventListener('touchcancel', end, { passive: true });
-    window.addEventListener('af:tap', tap);
+    // les rosaces au toucher sont remplacées par les feux d'artifice (GlobalFireworks)
+    void tap;
     window.addEventListener('resize', size);
     return () => {
       cancelAnimationFrame(raf);

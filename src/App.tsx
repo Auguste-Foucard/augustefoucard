@@ -13,6 +13,7 @@ import { LineArt } from './components/LineArt';
 import { PortalSwirl } from './components/PortalSwirl';
 import { MusicLines } from './components/MusicLines';
 import { initFeel } from './lib/feel';
+import { GlobalFireworks } from './components/GlobalFireworks';
 import Home from './pages/Home';
 
 const Games = lazy(() => import('./pages/Games'));
@@ -55,6 +56,7 @@ function Shell() {
       <Sky />
       <MusicLines />
       <LineArt />
+      <GlobalFireworks />
       <Contemplate />
       <a href="#main" className="skip-link">{t('nav.skip')}</a>
       <ReadingProgress />

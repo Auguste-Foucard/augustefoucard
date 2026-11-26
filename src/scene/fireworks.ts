@@ -1,8 +1,10 @@
 // Feux d'artifice : petit moteur de particules sur un canvas qui ne tourne que pendant les explosions.
 // Étincelles fines à longue traînée, gravité, traînée de l'air, couleurs qui évoluent, crépitements.
 
-export type FwType = 'peony' | 'chrysanthemum' | 'willow' | 'crackle' | 'ring';
-const MAJESTIC: FwType[] = ['peony', 'chrysanthemum', 'willow', 'crackle', 'ring', 'chrysanthemum', 'willow'];
+export type FwType = 'peony' | 'chrysanthemum' | 'willow' | 'crackle' | 'ring' | 'rainbow';
+const MAJESTIC: FwType[] = ['peony', 'chrysanthemum', 'willow', 'crackle', 'ring', 'rainbow', 'rainbow', 'chrysanthemum'];
+const HUES = [335, 285, 205, 175, 48, 140, 18, 260];
+const anyHue = () => HUES[Math.floor(Math.random() * HUES.length)] + (Math.random() - 0.5) * 16;
 export const randomType = () => MAJESTIC[Math.floor(Math.random() * MAJESTIC.length)];
 
 type P = {
@@ -82,6 +84,10 @@ export class Fireworks {
       case 'crackle':
         add(Math.round(58 * k * power), () => ({ ...sph(rnd(240, 280) * S), life: rnd(1.05, 1.4), tr: 7, crackle: true, l: 72 }));
         break;
+      case 'rainbow':
+        // crépitant multicolore : chaque étincelle a sa couleur et finit en éclats
+        add(Math.round(70 * k * power), () => { const h = anyHue(); return { ...sph(rnd(240, 285) * S), life: rnd(1.1, 1.6), tr: 9, h0: h, h1: h + 15, l: 70, crackle: true }; });
+        break;
       case 'ring': {
         const tilt = rnd(-0.6, 0.6), sq = rnd(0.35, 0.6);
         add(Math.round(52 * k * power), (i, n) => {
@@ -139,9 +145,10 @@ export class Fireworks {
       if (p.age >= p.life) {
         if (p.crackle) {
           // crépitement : la particule éclate en minuscules éclairs blancs
-          for (let k = 0; k < 4 && ps.length < this.cap; k++) {
+          for (let k = 0; k < 5 && ps.length < this.cap; k++) {
             const a = Math.random() * 6.283, sp = 20 + Math.random() * 45;
-            ps.push({ x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, age: 0, life: 0.12 + Math.random() * 0.28, h0: 48, h1: 48, s: 30, l: 92, g: 20, drag: 3, tr: 1, trail: [], w: 1, crackle: false, spark: true, flick: true });
+            const wh = Math.random() < 0.35;
+            ps.push({ x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, age: 0, life: 0.14 + Math.random() * 0.32, h0: p.h1, h1: p.h1, s: wh ? 20 : 100, l: wh ? 94 : 76, g: 20, drag: 3, tr: 1, trail: [], w: 1, crackle: false, spark: true, flick: true });
           }
         }
         ps[i] = ps[ps.length - 1]; ps.pop(); continue;
