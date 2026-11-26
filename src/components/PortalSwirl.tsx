@@ -1,3 +1,4 @@
+import { LITE } from '../lib/feel';
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -25,7 +26,7 @@ export function PortalSwirl() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const c = ref.current!;
     const g = c.getContext('2d')!;
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, LITE ? 1 : 1.5);
     const cw = window.innerWidth, ch = window.innerHeight;
     c.width = Math.round(cw * dpr); c.height = Math.round(ch * dpr);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);

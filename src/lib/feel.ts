@@ -3,6 +3,9 @@ const INTERACTIVE = 'button, a, [role="button"], .gcard2__link';
 const MAGNET = '.btn--glow, .filter2, .music-btn';
 const TILT = '.gcard2:not(.gcard2--slot) .gcard2__link';
 
+/** Téléphone / tablette : on allège les effets coûteux (canvas plein écran, gyro, scintillement). */
+export const LITE = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 760);
+
 export const haptic = (ms = 6) => { try { navigator.vibrate?.(ms); } catch { /* non supporté */ } };
 
 export function initFeel() {

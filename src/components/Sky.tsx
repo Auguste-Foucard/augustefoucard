@@ -1,3 +1,4 @@
+import { LITE } from '../lib/feel';
 import { useEffect, useRef } from 'react';
 import { bus, sky } from '../lib/sky';
 
@@ -57,7 +58,7 @@ export function Sky() {
     const canvas = ref.current!;
     const ctx = canvas.getContext('2d', { alpha: true })!;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let tier = reduce ? 1 : pickTier();
+    let tier = reduce ? 1 : LITE ? 0 : pickTier();
     let W = 0, H = 0, dpr = 1;
     let raf = 0, running = false;
     let last = performance.now();
@@ -260,12 +261,12 @@ export function Sky() {
       }
       raf = requestAnimationFrame(loop);
     };
-    const start = () => { if (running || reduce) return; running = true; last = performance.now(); raf = requestAnimationFrame(loop); };
+    const start = () => { if (running || reduce || LITE) return; running = true; last = performance.now(); raf = requestAnimationFrame(loop); };
     const stop = () => { running = false; cancelAnimationFrame(raf); };
     const onVis = () => (document.hidden ? stop() : start());
 
     resize(true);
-    if (reduce) draw(performance.now(), true); else start();
+    if (reduce || LITE) draw(performance.now(), true); else start();
     window.addEventListener('resize', () => resize());
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('pointermove', onPointer, { passive: true });

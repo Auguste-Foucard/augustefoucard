@@ -6,7 +6,7 @@ import { H, L } from './shared';
 export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
   const g = useMemo(() => {
     const r = rng(41);
-    const n = narrow ? 420 : 900;
+    const n = narrow ? 240 : 900;
     const mk = (count: number, big: number) => Array.from({ length: count }, () => {
       const band = r() < 0.35;
       const x = r() * (W + 200) - 100;

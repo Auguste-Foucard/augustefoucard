@@ -1,3 +1,4 @@
+import { LITE } from '../lib/feel';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { BlossomTree, Gate, Cloud, rng, ridgePath, ridgePts, smooth, type Pt } from './draw';
 import { HeroFX } from './HeroFX';
@@ -70,10 +71,10 @@ export function Landscape({ image, theme: themeProp }: { image?: string | null; 
     const start = () => { if (on) return; on = true; window.addEventListener('deviceorientation', orient, { passive: true }); raf = requestAnimationFrame(loop); };
     const DOE = (window as unknown as { DeviceOrientationEvent?: { requestPermission?: () => Promise<string> } }).DeviceOrientationEvent;
     let ask: (() => void) | null = null;
-    if (DOE && typeof DOE.requestPermission === 'function') {
+    if (LITE) { /* pas de gyro sur téléphone : trop coûteux */ } else if (DOE && typeof DOE.requestPermission === 'function') {
       ask = () => { DOE.requestPermission!().then((r) => { if (r === 'granted') start(); }).catch(() => {}); window.removeEventListener('pointerdown', ask!); };
       window.addEventListener('pointerdown', ask, { passive: true });
-    } else start();
+    } else if (!LITE) start();
     return () => { cancelAnimationFrame(raf); window.removeEventListener('deviceorientation', orient); if (ask) window.removeEventListener('pointerdown', ask); };
   }, [still]);
 

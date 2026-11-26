@@ -1129,3 +1129,10 @@ html[data-contemplate] .musiclines { display: none; }
 @keyframes af-shoot { 0% { transform: translateX(-200px); opacity: 0; } 2% { opacity: 1; } 9% { transform: translateX(520px); opacity: 0; } 100% { transform: translateX(520px); opacity: 0; } }
 .land--still .shoot { animation: none; }
 @media (prefers-reduced-motion: reduce) { .shoot { animation: none; } }
+
+/* V4.8 — mode allégé téléphone : pas d'animations qui forcent à redessiner de grands calques SVG */
+@media (pointer: coarse), (max-width: 760px) {
+  .twk--0, .twk--1, .twk--2, .aur, .rays, .shim, .stone, .portal-beam, .glint, .btn--glow { animation: none !important; }
+  .land__layer { will-change: auto; }
+  .header, .menu { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+}

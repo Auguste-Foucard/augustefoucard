@@ -1,3 +1,4 @@
+import { LITE } from '../lib/feel';
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { bus } from '../lib/sky';
@@ -21,7 +22,7 @@ export function MusicLines() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const c = ref.current!;
     const g = c.getContext('2d')!;
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, LITE ? 1 : 1.5);
     let w = 0, h = 0, raf = 0, amp = 0, last = performance.now(), cx = 0, cy = 0;
     const size = () => {
       w = window.innerWidth; h = window.innerHeight;
