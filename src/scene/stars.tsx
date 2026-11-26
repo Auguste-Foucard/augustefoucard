@@ -3,6 +3,7 @@ import { rng, smooth, type Pt } from './draw';
 import { H, L } from './shared';
 import { haptic } from '../lib/feel';
 import { chime } from '../lib/chime';
+import { burst } from './fireworks';
 
 type Jewel = { x: number; y: number; s: number; d: number; t: number; c: string; r: number };
 const TINTS = ['#ffffff', '#dfe8ff', '#cfdcff', '#fff1d6', '#ffe6c2', '#e8f0ff'];
@@ -52,6 +53,7 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
     const ring = (s: HTMLElement, vel = 1) => {
       s.classList.remove('jewel--flare'); void s.offsetWidth; s.classList.add('jewel--flare');
       const [x, y] = pos(s); chime(y / 100, x / 100, vel); haptic(8);
+      burst(el, x, y, vel >= 1 ? 1 : 0.7);
     };
     const line = (g: Element, a: readonly [number, number], b: readonly [number, number], cls: string) => {
       const l = document.createElementNS(NS, 'line');
@@ -91,7 +93,7 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
       if (t.chain.length < 2) { t.g.remove(); return; }
       // la constellation se rejoue, puis s'efface doucement
       t.g.classList.add('cons__g--done');
-      if (t.chain.length >= 3) t.chain.forEach((s, i) => setTimeout(() => { const [x, y] = pos(s); chime(y / 100, x / 100, 0.55); s.classList.remove('jewel--flare'); void s.offsetWidth; s.classList.add('jewel--flare'); }, 350 + i * 170));
+      if (t.chain.length >= 3) t.chain.forEach((s, i) => setTimeout(() => { const [x, y] = pos(s); chime(y / 100, x / 100, 0.55); burst(el, x, y, 1.35); s.classList.remove('jewel--flare'); void s.offsetWidth; s.classList.add('jewel--flare'); }, 350 + i * 170));
       setTimeout(() => t.g.classList.add('cons__g--fade'), 4200 + t.chain.length * 170);
       setTimeout(() => t.g.remove(), 7600 + t.chain.length * 170);
     };
@@ -108,7 +110,7 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
       j.style.setProperty('--t', `${5 + Math.random() * 3}s`);
       j.innerHTML = '<span class="jewel__n"><i class="jewel__glow"></i><i class="jewel__spk"></i><i class="jewel__spk jewel__spk--d"></i><i class="jewel__core"></i></span>';
       el.appendChild(j);
-      chime(y / 100, x / 100, 0.7); haptic(6);
+      chime(y / 100, x / 100, 0.7); haptic(6); burst(el, x, y, 0.6);
       window.setTimeout(() => j.remove(), 12000);
     };
 
