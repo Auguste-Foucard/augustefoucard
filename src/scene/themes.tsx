@@ -2,10 +2,10 @@ import { useMemo, type ReactNode } from 'react';
 import { Cloud, Gate, rng, ridgePath, ridgePts, smooth, type Pt } from './draw';
 import { Defs, H, L, MOON_PAL, WATER, type Pal } from './shared';
 
-export type Theme = 'moon' | 'aurora' | 'milkyway' | 'sunrise';
-export const THEMES: Theme[] = ['moon', 'aurora', 'milkyway', 'sunrise'];
+export type Theme = 'moon' | 'aurora' | 'milkyway' | 'sunrise' | 'ink' | 'zen' | 'bluehour';
+export const THEMES: Theme[] = ['moon', 'aurora', 'milkyway', 'sunrise', 'ink', 'zen', 'bluehour'];
 
-type Cfg = { pal: Pal; sky: [string, string, string]; water: boolean; aurora: number; milky: boolean; sun: boolean; pines: boolean; rim: string; seed: number };
+type Cfg = { pal: Pal; sky: [string, string, string]; water: boolean; aurora: number; milky: boolean; sun: boolean; disc?: { c: [string, string, string]; halo: [string, string]; y: number; r: number; rays: boolean; mist: number }; pines: boolean; rim: string; seed: number };
 
 const CFG: Record<Exclude<Theme, 'moon'>, Cfg> = {
   aurora: {
@@ -22,6 +22,21 @@ const CFG: Record<Exclude<Theme, 'moon'>, Cfg> = {
     pal: { ...MOON_PAL, glow: ['#e0784a', '#7a2f60'], haze: '#ffb888', clLit: ['#ffd2a8', '#c0607a', '#3a1c5a'], clDark: ['#a0507a', '#3a1c5a', '#160c36'], clMist: ['#ffc8a0', '#b0587a'],
       m1: ['#c06a7e', '#6a3a78', '#341f5e'], m2: ['#8a4a7e', '#341f5e'], m3: ['#2e1c52', '#120a30'], lake: ['#d8804e', '#7a3868', '#1c1034'], fg: ['#1c1034', '#0e0a24', '#060418'], aur: ['#ffb070', '#ff7aa0', '#ffd88a', '#ffe0a0'] },
     sky: ['#1a1444', '#6a2f70', '#f08a58'], water: true, aurora: 0, milky: false, sun: true, pines: false, rim: '#ffe0b8', seed: 13,
+  },
+  ink: {
+    pal: { ...MOON_PAL, glow: ['#9fb4c4', '#3a4f66'], haze: '#cfdbe4', clLit: ['#e4edf2', '#8ea4b8', '#34475e'], clDark: ['#6a8098', '#2a3a52', '#101a2c'], clMist: ['#dfe9ef', '#8fa6ba'],
+      m1: ['#a9bccb', '#5d7590', '#2b3d56'], m2: ['#7f96ab', '#34485f'], m3: ['#2a3c54', '#101c30'], lake: ['#6d869c', '#33475e', '#0d1626'], fg: ['#101c2e', '#0a1322', '#060c18'], aur: ['#cfe4f2', '#9fbcd4', '#7f9cb8', '#e8f2f8'] },
+    sky: ['#10192c', '#3a4f68', '#b4c6d4'], water: true, aurora: 0, milky: false, sun: true, disc: { c: ['#ffffff', '#f2f6fa', '#d4e0ea'], halo: ['#eef5fa', '#9fb8cc'], y: 470, r: 52, rays: false, mist: 1 }, pines: false, rim: '#f0f6fa', seed: 21,
+  },
+  zen: {
+    pal: { ...MOON_PAL, glow: ['#6a8fd0', '#1c2e66'], haze: '#8fa8e0', clLit: ['#b8c8ee', '#4f68a8', '#1a2448'], clDark: ['#3a4f88', '#141e46', '#080e26'], clMist: ['#a8b8e4', '#4a62a0'],
+      m1: ['#5a74b0', '#24356c', '#121c46'], m2: ['#3e5694', '#18265a'], m3: ['#141f4a', '#080e2a'], lake: ['#2a3f7a', '#141f52', '#060b24'], fg: ['#0a1030', '#060a22', '#03061a'], aur: ['#9ab4ff', '#cfd8ff', '#7a94e8', '#e8eeff'] },
+    sky: ['#040716', '#0c1a44', '#22408a'], water: true, aurora: 0, milky: false, sun: true, disc: { c: ['#ffffff', '#f4f7ff', '#cdd9f6'], halo: ['#dbe6ff', '#4f68c0'], y: 520, r: 100, rays: false, mist: 0.4 }, pines: false, rim: '#cfdcff', seed: 17,
+  },
+  bluehour: {
+    pal: { ...MOON_PAL, glow: ['#e8b078', '#2a3f78'], haze: '#f0c090', clLit: ['#ffd8b0', '#8a78b0', '#243060'], clDark: ['#5a68a0', '#1e2a5c', '#0a1030'], clMist: ['#f6cfa8', '#8a82b4'],
+      m1: ['#8a90c0', '#3e4c88', '#1c2858'], m2: ['#5a68a4', '#222f68'], m3: ['#1a2658', '#0a1032'], lake: ['#8a86b0', '#34447e', '#0a1230'], fg: ['#0c1436', '#080e28', '#040820'], aur: ['#f0c898', '#b8b0f0', '#ffd8a8', '#fff0d0'] },
+    sky: ['#0a1236', '#2c4488', '#f0b888'], water: true, aurora: 0, milky: false, sun: true, disc: { c: ['#fff6e0', '#ffe2b0', '#f8c088'], halo: ['#ffd8a0', '#c08078'], y: 600, r: 40, rays: false, mist: 1 }, pines: false, rim: '#ffe4c0', seed: 29,
   },
 };
 
@@ -63,7 +78,7 @@ export function AltScene({ theme, W, narrow }: { theme: Exclude<Theme, 'moon'>; 
         rays.push({ x, y: base, h: 120 + Math.abs(Math.sin(x / 83 + b * 3)) * 190 + r() * 50, w: 9 + r() * 4, o: (0.5 - b * 0.12) * (0.5 + 0.5 * Math.sin(x / 130 + b)) });
       }
     }
-    const sunX = W * (narrow ? 0.56 : 0.64), sunY = 560, sunR = narrow ? 64 : 84;
+    const dd = cfg.disc, sunX = W * (narrow ? 0.5 : theme === 'zen' || theme === 'ink' ? 0.22 : 0.64), sunY = dd ? dd.y : 560, sunR = (dd ? dd.r : 84) * (narrow ? 0.78 : 1);
     const rr = rng(8);
     const refl = Array.from({ length: 15 }, (_, i) => ({ y: WATER + 22 + i * 17.5, w: 26 + i * 9 + rr() * 22, h: 2.6 + i * 0.28, d: rr() * 5, o: 0.7 - i * 0.034 }));
     const stones = Array.from({ length: 9 }, (_, i) => { const t = i / 8; return { x: castleX - 70 - Math.pow(1 - t, 1.5) * 420 * (narrow ? 0.6 : 1), y: WATER + 86 - t * 66, o: 0.9 - t * 0.35, w: 36 - t * 26 }; });
@@ -97,8 +112,8 @@ export function AltScene({ theme, W, narrow }: { theme: Exclude<Theme, 'moon'>; 
           <linearGradient id="skybg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={cfg.sky[0]} /><stop offset=".6" stopColor={cfg.sky[1]} /><stop offset="1" stopColor={cfg.sky[2]} /></linearGradient>
           <linearGradient id="aur-ray" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor={cfg.pal.aur[0]} stopOpacity=".85" /><stop offset=".5" stopColor={cfg.pal.aur[1]} stopOpacity=".35" /><stop offset="1" stopColor={cfg.pal.aur[2]} stopOpacity="0" /></linearGradient>
           <radialGradient id="mw"><stop offset="0" stopColor="#ffe6dc" stopOpacity=".5" /><stop offset=".45" stopColor="#d8a8e8" stopOpacity=".2" /><stop offset="1" stopColor="#8a6ad0" stopOpacity="0" /></radialGradient>
-          <radialGradient id="sun-disc" cx=".5" cy=".5" r=".5"><stop offset="0" stopColor="#fffbe8" /><stop offset=".7" stopColor="#ffe0a0" /><stop offset="1" stopColor="#ffb870" /></radialGradient>
-          <radialGradient id="sun-halo"><stop offset="0" stopColor="#ffd08a" stopOpacity=".9" /><stop offset=".3" stopColor="#ff9a6a" stopOpacity=".4" /><stop offset="1" stopColor="#c0507a" stopOpacity="0" /></radialGradient>
+          <radialGradient id="sun-disc" cx=".5" cy=".5" r=".5"><stop offset="0" stopColor={cfg.disc?.c[0] ?? '#fffbe8'} /><stop offset=".7" stopColor={cfg.disc?.c[1] ?? '#ffe0a0'} /><stop offset="1" stopColor={cfg.disc?.c[2] ?? '#ffb870'} /></radialGradient>
+          <radialGradient id="sun-halo"><stop offset="0" stopColor={cfg.disc?.halo[0] ?? '#ffd08a'} stopOpacity=".9" /><stop offset=".3" stopColor={cfg.disc?.halo[1] ?? '#ff9a6a'} stopOpacity=".4" /><stop offset="1" stopColor={cfg.disc?.halo[1] ?? '#c0507a'} stopOpacity="0" /></radialGradient>
           <linearGradient id="sun-ray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffe0a8" stopOpacity=".5" /><stop offset="1" stopColor="#ffe0a8" stopOpacity="0" /></linearGradient>
         </defs>
       </svg>
@@ -137,16 +152,16 @@ export function AltScene({ theme, W, narrow }: { theme: Exclude<Theme, 'moon'>; 
           {cfg.sun && (
             <g>
               <circle cx={g.sunX} cy={g.sunY} r={g.sunR * 6} fill="url(#sun-halo)" />
-              <g className="rays" filter="url(#bl)">
+              {cfg.disc?.rays !== false && <g className="rays" filter="url(#bl)">
                 {[-150, -80, -25, 30, 95, 160].map((dx, i) => <path key={i} d={`M${g.sunX - 8} ${g.sunY}L${g.sunX + dx * 3.4 - 30} -120L${g.sunX + dx * 3.4 + 30} -120L${g.sunX + 8} ${g.sunY}Z`} fill="url(#sun-ray)" opacity={0.45 - Math.abs(dx) / 450} />)}
-              </g>
+              </g>}
               <circle cx={g.sunX} cy={g.sunY} r={g.sunR} fill="url(#sun-disc)" />
             </g>
           )}
           <g filter="url(#soft)">
             <Cloud x={W * 0.3} y={330} w={W * 0.36} h={80} seed={12} tone="lit" o={cfg.sun ? 0.85 : 0.5} />
             <Cloud x={W * 0.74} y={440} w={W * 0.3} h={70} seed={15} tone="lit" o={cfg.sun ? 0.8 : 0.45} />
-            {cfg.sun && <Cloud x={W * 0.12} y={470} w={W * 0.3} h={70} seed={14} tone="lit" o={0.7} />}
+            {cfg.sun && !cfg.disc && <Cloud x={W * 0.12} y={470} w={W * 0.3} h={70} seed={14} tone="lit" o={0.7} />}
           </g>
         </svg>
       </div>
@@ -164,8 +179,8 @@ export function AltScene({ theme, W, narrow }: { theme: Exclude<Theme, 'moon'>; 
       <div className="land__layer land__drift land__drift--b" style={L(7)}>
         <svg viewBox={vb} preserveAspectRatio="xMidYMid slice">
           <g filter="url(#soft)">
-            <Cloud x={W * 0.3} y={620} w={W * 0.5} h={70} seed={31} tone="mist" o={cfg.sun ? 1 : 0.8} />
-            <Cloud x={W * 0.78} y={645} w={W * 0.45} h={60} seed={33} tone="mist" o={cfg.sun ? 0.95 : 0.7} />
+            <Cloud x={W * 0.3} y={620} w={W * 0.5} h={70} seed={31} tone="mist" o={cfg.disc ? cfg.disc.mist : cfg.sun ? 1 : 0.8} />
+            <Cloud x={W * 0.78} y={645} w={W * 0.45} h={60} seed={33} tone="mist" o={cfg.disc ? cfg.disc.mist : cfg.sun ? 0.95 : 0.7} />
           </g>
         </svg>
       </div>
@@ -195,7 +210,7 @@ export function AltScene({ theme, W, narrow }: { theme: Exclude<Theme, 'moon'>; 
                     <g transform={`translate(${gx} ${WATER * 2 - g.hillTop - 6}) scale(${g.gateS} ${-g.gateS})`}><Gate s={1} lights /></g>
                   </g>
                 </g>
-                {cfg.sun && g.refl.map((s, i) => <ellipse key={i} className="shim" style={{ animationDelay: `${(i % 5) * 0.9}s` }} cx={g.sunX} cy={s.y} rx={s.w} ry={s.h} fill="#ffe0a8" opacity={s.o} />)}
+                {cfg.sun && g.refl.map((s, i) => <ellipse key={i} className="shim" style={{ animationDelay: `${(i % 5) * 0.9}s` }} cx={g.sunX} cy={s.y} rx={s.w} ry={s.h} fill={cfg.disc?.c[1] ?? '#ffe0a8'} opacity={s.o} />)}
                 {theme === 'aurora' && g.refl.slice(0, 9).map((s, i) => <ellipse key={i} className="shim" style={{ animationDelay: `${(i % 5) * 0.9}s` }} cx={W * 0.45} cy={s.y} rx={s.w * 1.8} ry={s.h * 1.2} fill="#7dffc8" opacity={s.o * 0.35} />)}
               </g>
               <rect x="-200" y={WATER - 4} width={W + 400} height="70" fill="url(#hz)" />
