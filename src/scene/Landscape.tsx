@@ -3,6 +3,7 @@ import { BlossomTree, Gate, Cloud, rng, ridgePath, ridgePts, smooth, type Pt } f
 import { HeroFX } from './HeroFX';
 import { Defs, H, L, WATER } from './shared';
 import { AltScene, THEMES, type Theme } from './themes';
+import { StarScene } from './stars';
 
 
 /**
@@ -84,10 +85,10 @@ export function Landscape({ image, theme: themeProp }: { image?: string | null; 
       {image ? (
         <div className="land__layer" style={{ ['--k' as string]: 8 } as CSSProperties}><img className="land__img" src={image} alt="" decoding="async" fetchPriority="high" /></div>
       ) : (
-        theme === 'moon' ? <Scene W={W} narrow={narrow} /> : <AltScene theme={theme} W={W} narrow={narrow} />
+        theme === 'moon' ? <Scene W={W} narrow={narrow} /> : theme === 'stars' ? <StarScene W={W} narrow={narrow} /> : <AltScene theme={theme} W={W} narrow={narrow} />
       )}
       <div className="land__fade" />
-      {!still && <HeroFX W={W} narrow={narrow} cw={dim.w} ch={dim.h} tree={!image && theme === 'moon'} />}
+      {!still && (image || theme !== 'stars') && <HeroFX W={W} narrow={narrow} cw={dim.w} ch={dim.h} tree={!image && theme === 'moon'} />}
     </div>
   );
 }

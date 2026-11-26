@@ -2,12 +2,13 @@ import { useMemo, type ReactNode } from 'react';
 import { Cloud, Gate, rng, ridgePath, ridgePts, smooth, type Pt } from './draw';
 import { Defs, H, L, MOON_PAL, WATER, type Pal } from './shared';
 
-export type Theme = 'moon' | 'aurora' | 'milkyway' | 'sunrise' | 'ink' | 'zen' | 'bluehour';
-export const THEMES: Theme[] = ['moon', 'aurora', 'milkyway', 'sunrise', 'ink', 'zen', 'bluehour'];
+export type Theme = 'moon' | 'aurora' | 'milkyway' | 'sunrise' | 'ink' | 'zen' | 'bluehour' | 'stars';
+export type AltTheme = Exclude<Theme, 'moon' | 'stars'>;
+export const THEMES: Theme[] = ['moon', 'aurora', 'milkyway', 'sunrise', 'ink', 'zen', 'bluehour', 'stars'];
 
 type Cfg = { pal: Pal; sky: [string, string, string]; water: boolean; aurora: number; milky: boolean; sun: boolean; disc?: { c: [string, string, string]; halo: [string, string]; y: number; r: number; rays: boolean; mist: number }; pines: boolean; rim: string; seed: number };
 
-const CFG: Record<Exclude<Theme, 'moon'>, Cfg> = {
+const CFG: Record<AltTheme, Cfg> = {
   aurora: {
     pal: { ...MOON_PAL, glow: ['#2fbfa0', '#14566e'], haze: '#7fd6e6', clLit: ['#a8e8e8', '#3f7f9a', '#12304a'], clDark: ['#4f8aa8', '#143450', '#07162a'], clMist: ['#9fe0e8', '#4f8fa8'],
       m1: ['#8fb4d4', '#365a80', '#183050'], m2: ['#5e86ae', '#1a3358'], m3: ['#1c3758', '#0a1830'], lake: ['#2e6a84', '#183f5e', '#081528'], fg: ['#0c1c30', '#08121f', '#040a14'], aur: ['#5fe0c4', '#8f8cff', '#b48cff', '#7dffc8'] },
@@ -53,7 +54,7 @@ const pine = (x: number, y: number, h: number) => {
   return `M${x} ${y - h}L${L.join('L')}L${x - 4} ${y}L${x + 4} ${y}L${R.join('L')}Z`;
 };
 
-export function AltScene({ theme, W, narrow }: { theme: Exclude<Theme, 'moon'>; W: number; narrow: boolean }) {
+export function AltScene({ theme, W, narrow }: { theme: AltTheme; W: number; narrow: boolean }) {
   const cfg = CFG[theme];
   const g = useMemo(() => {
     const r = rng(cfg.seed);
