@@ -106,6 +106,27 @@ Vidéos : `src` (fichier mp4) **ou** `embed` (URL d'intégration YouTube `https:
 
 `archives.json` : `kind` = `game`, `student`, `jam`, `prototype`, `video` ou `experimental`. Le tri par année est automatique.
 
+### AURA (jeu sensoriel intégré au site)
+
+AURA est un jeu web autonome (aucune dépendance, aucun build) dans `public/play/aura/`. Il est publié dans
+« Mes créations » via l'entrée `aura` de `games.json` (catégories Expérimentations et Jeux mobiles) et
+s'ouvre aussi seul sur `/play/aura/`, où il s'installe sur l'iPhone (Partager → Sur l'écran d'accueil) et fonctionne hors connexion.
+
+| Fichier | Rôle |
+|---|---|
+| `js/economy.js` | Formes et niveaux de déblocage, pouvoirs, harmonies, arbre d'évolution, coûts, courbe de niveaux |
+| `js/shapes.js` | Reconnaissance (très permissive) des formes dessinées |
+| `js/creations.js` · `js/reactions.js` | Animation de chaque forme · effets des harmonies |
+| `js/powers.js` | Feux d'artifice, eau, magnétisme (le kaléidoscope est dans `main.js`) |
+| `js/universe.js` | Univers persistant : étoiles, fleurs, galaxies, nébuleuse |
+| `js/audio.js` | Son 100 % synthétisé (gamme pentatonique, nappes, réverbération) |
+| `js/i18n.js` | Textes FR / EN |
+
+- Après une modification, incrémente `CACHE` dans `public/play/aura/sw.js` (`aura-v2`, …) pour que les joueurs hors ligne reçoivent la mise à jour.
+- La progression est sauvegardée dans le navigateur du joueur (`localStorage`, clé `aura.save.v1`).
+- Captures et tests : `/play/aura/?demo=30&up=5` lance une démo sans sauvegarde (niveau 30, améliorations au niveau 5, formes qui se dessinent seules ;
+  ajoute `&still` pour dessiner soi-même, `&clean` pour masquer l'interface).
+
 ### Ajouter une expérimentation au LAB
 
 - Texte simple ou prototype web : entrée dans `lab.json`, avec `embed` pour une URL à intégrer.

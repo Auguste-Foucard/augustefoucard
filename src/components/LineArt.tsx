@@ -56,7 +56,7 @@ export function LineArt() {
       g.globalCompositeOperation = 'lighter';
       for (let i = bursts.length - 1; i >= 0; i--) {
         const b = bursts[i];
-        const u = (now - b.t0) / (b.strong ? 900 : 650);
+        const u = Math.max(0, (now - b.t0) / (b.strong ? 900 : 650));
         if (u >= 1) { bursts.splice(i, 1); continue; }
         const e = 1 - Math.pow(1 - u, 3), R = (b.strong ? 86 : 56) * e, a = (1 - u) * (b.strong ? 0.75 : 0.55);
         g.lineWidth = 1.2 * (1 - u) + 0.4;
