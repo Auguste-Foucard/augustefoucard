@@ -150,7 +150,7 @@ export type Social = { id: string; label: string; url: string | null };
 
 export type Site = {
   /** Illustration d'accueil (facultative). Si renseignée, elle remplace le paysage dessiné en code. */
-  hero?: { image: string | null };
+  hero?: { image: string | null; theme?: string };
   name: string;
   roles: string[];
   tagline: L;

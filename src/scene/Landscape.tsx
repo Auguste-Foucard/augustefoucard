@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { BlossomTree, Gate, Cloud, rng, ridgePath, ridgePts, smooth, type Pt } from './draw';
 import { HeroFX } from './HeroFX';
+import { Defs, H, L, WATER } from './shared';
+import { AltScene, THEMES, type Theme } from './themes';
 
-const H = 1000;
-const WATER = 705;
 
 /**
  * Paysage nocturne illustré (SVG vectoriel dessiné pour le site) :
@@ -11,7 +11,10 @@ const WATER = 705;
  * Calques séparés → parallaxe douce à la souris ; seuls les calques sont déplacés (composités GPU).
  * Si `image` est fourni (illustration finale en .webp/.jpg), elle remplace le dessin vectoriel.
  */
-export function Landscape({ image }: { image?: string | null }) {
+export function Landscape({ image, theme: themeProp }: { image?: string | null; theme?: string | null }) {
+  // `?theme=aurora|milkyway|sunrise|moon` permet de comparer les décors en direct
+  const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search || window.location.hash.split('?')[1] || '').get('theme') : null;
+  const theme = ([q, themeProp].find((t) => t && (THEMES as string[]).includes(t)) ?? 'moon') as Theme;
   const box = useRef<HTMLDivElement>(null);
   const [dim, setDim] = useState({ w: 1440, h: 900 });
   const [still, setStill] = useState(false);
@@ -81,51 +84,11 @@ export function Landscape({ image }: { image?: string | null }) {
       {image ? (
         <div className="land__layer" style={{ ['--k' as string]: 8 } as CSSProperties}><img className="land__img" src={image} alt="" decoding="async" fetchPriority="high" /></div>
       ) : (
-        <Scene W={W} narrow={narrow} />
+        theme === 'moon' ? <Scene W={W} narrow={narrow} /> : <AltScene theme={theme} W={W} narrow={narrow} />
       )}
       <div className="land__fade" />
-      {!still && <HeroFX W={W} narrow={narrow} cw={dim.w} ch={dim.h} tree={!image} />}
+      {!still && <HeroFX W={W} narrow={narrow} cw={dim.w} ch={dim.h} tree={!image && theme === 'moon'} />}
     </div>
-  );
-}
-
-const L = (k: number): CSSProperties => ({ ['--k' as string]: k } as CSSProperties);
-
-function Defs() {
-  return (
-    <svg className="land__defs" width="1" height="1" aria-hidden="true" focusable="false">
-      <defs>
-        <radialGradient id="moon-disc" cx=".38" cy=".34" r=".8"><stop offset="0" stopColor="#fffaf0" /><stop offset=".55" stopColor="#f1e6cc" /><stop offset="1" stopColor="#c9c0b4" /></radialGradient>
-        <radialGradient id="moon-halo"><stop offset="0" stopColor="#f6ecd2" stopOpacity=".55" /><stop offset=".25" stopColor="#c9d3f2" stopOpacity=".22" /><stop offset="1" stopColor="#5f7ccc" stopOpacity="0" /></radialGradient>
-        <radialGradient id="sky-glow"><stop offset="0" stopColor="#4a67b8" stopOpacity=".55" /><stop offset=".5" stopColor="#2c4287" stopOpacity=".22" /><stop offset="1" stopColor="#1a2a66" stopOpacity="0" /></radialGradient>
-        <radialGradient id="gold-glow"><stop offset="0" stopColor="#ffd27a" stopOpacity=".9" /><stop offset="1" stopColor="#ffb34a" stopOpacity="0" /></radialGradient>
-        <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7d95dd" stopOpacity="0" /><stop offset=".6" stopColor="#8fa6e6" stopOpacity=".32" /><stop offset="1" stopColor="#6f86c8" stopOpacity=".1" /></linearGradient>
-        <linearGradient id="cl-lit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#a9baf0" stopOpacity=".85" /><stop offset=".5" stopColor="#4a60a8" stopOpacity=".8" /><stop offset="1" stopColor="#1a2656" stopOpacity=".85" /></linearGradient>
-        <linearGradient id="cl-dark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#5a6fb4" stopOpacity=".9" /><stop offset=".4" stopColor="#1b2760" stopOpacity=".95" /><stop offset="1" stopColor="#0b1235" stopOpacity=".95" /></linearGradient>
-        <linearGradient id="cl-mist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#9db0ea" stopOpacity=".5" /><stop offset="1" stopColor="#5a70b8" stopOpacity=".08" /></linearGradient>
-        <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4a5ea8" /><stop offset=".5" stopColor="#273776" /><stop offset="1" stopColor="#1a2563" /></linearGradient>
-        <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#34478f" /><stop offset="1" stopColor="#141d52" /></linearGradient>
-        <linearGradient id="m3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#1c2a68" /><stop offset="1" stopColor="#0a1033" /></linearGradient>
-        <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#334a92" /><stop offset=".25" stopColor="#1e2d6a" /><stop offset="1" stopColor="#0a1236" /></linearGradient>
-        <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#101a44" /><stop offset=".4" stopColor="#0a1130" /><stop offset="1" stopColor="#050918" /></linearGradient>
-        <linearGradient id="refl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f6ecd2" stopOpacity=".7" /><stop offset="1" stopColor="#f6ecd2" stopOpacity=".04" /></linearGradient>
-        <filter id="soft" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="9" /></filter>
-        <filter id="soft2" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="5" /></filter>
-        <filter id="bl" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="7" /></filter>
-        <filter id="ripple" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.0035 0.09" numOctaves="2" seed="4" result="n" /><feDisplacementMap in="SourceGraphic" in2="n" scale="26" /><feGaussianBlur stdDeviation="1.6 3.2" /></filter>
-        <linearGradient id="fade-v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity="1" /><stop offset=".55" stopColor="#fff" stopOpacity=".45" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient>
-        <mask id="refl-mask" maskUnits="userSpaceOnUse" x="-400" y={WATER} width="6000" height="320"><rect x="-400" y={WATER} width="6000" height="320" fill="url(#fade-v)" /></mask>
-        <linearGradient id="hz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#a9bcf2" stopOpacity=".38" /><stop offset="1" stopColor="#a9bcf2" stopOpacity="0" /></linearGradient>
-        <linearGradient id="hz-up" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#8ea5ea" stopOpacity=".34" /><stop offset="1" stopColor="#8ea5ea" stopOpacity="0" /></linearGradient>
-        <radialGradient id="portal-halo"><stop offset="0" stopColor="#ffd88a" stopOpacity=".55" /><stop offset=".45" stopColor="#7f9cf0" stopOpacity=".22" /><stop offset="1" stopColor="#5a78d6" stopOpacity="0" /></radialGradient>
-        <linearGradient id="portal-core" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#fff1c8" stopOpacity=".95" /><stop offset=".5" stopColor="#ffd27a" stopOpacity=".7" /><stop offset="1" stopColor="#9db6ff" stopOpacity=".55" /></linearGradient>
-        <linearGradient id="portal-beam" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#ffe3a8" stopOpacity=".3" /><stop offset=".6" stopColor="#9db6ff" stopOpacity=".08" /><stop offset="1" stopColor="#9db6ff" stopOpacity="0" /></linearGradient>
-        <linearGradient id="aur1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#5fe0c4" stopOpacity="0" /><stop offset=".35" stopColor="#6fe8d0" stopOpacity=".5" /><stop offset=".7" stopColor="#8f8cff" stopOpacity=".45" /><stop offset="1" stopColor="#b48cff" stopOpacity="0" /></linearGradient>
-        <linearGradient id="aur2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#ffd88a" stopOpacity="0" /><stop offset=".5" stopColor="#8fb0ff" stopOpacity=".38" /><stop offset="1" stopColor="#7de3ff" stopOpacity="0" /></linearGradient>
-        <linearGradient id="ray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f6ecd2" stopOpacity=".26" /><stop offset="1" stopColor="#f6ecd2" stopOpacity="0" /></linearGradient>
-        <clipPath id="clip-water"><rect x="-200" y={WATER} width="6000" height="400" /></clipPath>
-      </defs>
-    </svg>
   );
 }
 

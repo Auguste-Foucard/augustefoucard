@@ -104,6 +104,7 @@
     }
   ],
   "hero": {
-    "image": null
+    "image": null,
+    "theme": "moon"
   }
 }

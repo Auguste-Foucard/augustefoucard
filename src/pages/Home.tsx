@@ -30,7 +30,7 @@ export default function Home() {
   return (
     <>
       <section className="hero2" ref={ref}>
-        <Landscape image={site.hero?.image ? asset(site.hero.image) : null} />
+        <Landscape image={site.hero?.image ? asset(site.hero.image) : null} theme={site.hero?.theme} />
         <motion.div className="hero2__inner" style={{ y, opacity: o }}>
           <h1 className="hero2__name" aria-label="Auguste Foucard">
             {words.map((w, wi) => (
