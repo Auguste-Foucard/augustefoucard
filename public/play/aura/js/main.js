@@ -165,6 +165,7 @@ function startMode(m, opt) {
 }
 
 // ---------- Gestes ----------
+let melodyOwner = null;
 const ptrs = new Map(); const ripples = new Ripples(G); const sand = new Sand(G);
 const kCenter = () => ({ x: G.W / 2, y: G.H / 2 });
 const symCount = () => 6 + (G.bloom >= 3 ? 2 : 0);
@@ -181,6 +182,8 @@ canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture?.(e.pointerId);
   const p = { id: e.pointerId, x: e.clientX, y: e.clientY, raw: [{ x: e.clientX, y: e.clientY }], vis: [], t0: G.t, last: performance.now(), lx: e.clientX, ly: e.clientY, dist: 0, power: state.power, h: nextHue(), hapD: 0 };
   ptrs.set(e.pointerId, p); ui.drawing(true);
+  // Le premier doigt qui dessine mène la mélodie.
+  if ((p.power === 'filaments' || p.power === 'kaleido') && melodyOwner === null) { melodyOwner = e.pointerId; audio.strokeStart(p.y / G.H, p.power); }
   if (p.power === 'fireworks') p.charge = new Charge(G, p.x, p.y, p.id);
   if (p.power === 'water') ripples.add(p.x, p.y, 1);
   addVis(p, p.x, p.y, 0);
@@ -190,14 +193,14 @@ canvas.addEventListener('pointermove', (e) => {
   const p = ptrs.get(e.pointerId); if (!p) return; e.preventDefault();
   const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
   for (const ev of evs) {
-    const x = ev.clientX, y = ev.clientY; const d = dist(p.lx, p.ly, x, y); if (d < 2.5) continue;
+    const x = ev.clientX, y = ev.clientY; const d = dist(p.lx, p.ly, x, y); if (d < 2.5) continue; const dyMove = y - p.ly;
     const now = performance.now(); const dt = Math.max(1, now - p.last); const speed = d / dt; // px/ms
     p.last = now; p.lx = x; p.ly = y; p.x = x; p.y = y; p.dist += d; p.raw.push({ x, y });
     addVis(p, x, y, speed);
     if (p.power === 'filaments' || p.power === 'kaleido') {
       // Particules qui naissent du geste.
       const n = d * 0.05 * G.pm; for (let i = 0; i < n || Math.random() < n; i++) { if (i > 8) break; const a = rand(TAU); const v = rand(10, 40) + speed * 25; G.P.add(x, y, Math.cos(a) * v, Math.sin(a) * v, { k: Math.random() < 0.3 + G.trailMult * 0.05 ? 1 : 0, life: rand(0.8, 1.8) * (0.8 + G.trailMult * 0.2), s: rand(2, 4.5), h: p.h + rand(-20, 20) + G.t * 30, grav: -8, tur: 16 }); }
-      audio.gesture(y / G.H, speed, (x / G.W) * 2 - 1, p.power);
+      if (melodyOwner === p.id) audio.gesture(y / G.H, speed, (x / G.W) * 2 - 1, p.power, dyMove);
       earn(d * 0.0016 * gainMult(state), x, y, 'stroke', true);
     } else if (p.power === 'fireworks' && p.charge) p.charge.move(x, y);
     else if (p.power === 'water') { p.wd = (p.wd || 0) + d; if (p.wd > 70) { p.wd = 0; ripples.add(x, y, 0.6); } }
@@ -216,12 +219,13 @@ function addVis(p, x, y, speed) {
 
 function endPointer(e) {
   const p = ptrs.get(e.pointerId); if (!p) return; ptrs.delete(e.pointerId); if (!ptrs.size) ui.drawing(false);
+  if (melodyOwner === e.pointerId) { melodyOwner = null; audio.strokeEnd(); } // la phrase se pose (ou une seule note pour une touche)
   if (p.power === 'fireworks') { p.charge.release(); return; }
   if (p.power === 'water' || p.power === 'magnet') return;
   const dur = G.t - p.t0;
   if (p.dist < 14) { // simple touche : une pluie d'étincelles et une note
     burst(G.P, p.x, p.y, { n: Math.round(14 * G.pm), speed: 70, life: 1.4, s: 3.5, k: 0, h: p.h, spread: 0.6 });
-    audio.note(Math.round((1 - p.y / G.H) * 12) + 2, { kind: 'kalimba', vel: 0.4, pan: (p.x / G.W) * 2 - 1 }); earn(0.5 * gainMult(state), p.x, p.y, 'tap', true); return;
+    earn(0.5 * gainMult(state), p.x, p.y, 'tap', true); return;
   }
   state.stats.strokes++;
   const kal = p.power === 'kaleido'; const opts = kal ? { sym: symCount(), center: kCenter() } : {};
@@ -441,4 +445,4 @@ addEventListener('focus', () => checkUpdate());
 addEventListener('online', () => checkUpdate(true));
 setInterval(() => { if (!document.hidden) checkUpdate(); }, 10 * 60_000);
 setTimeout(() => checkUpdate(true), 4000);
-window.__aura = { G, version: VERSION, screenInfo: () => `${innerWidth}×${innerHeight} · ${screen.width}×${screen.height} · ${G.W}×${G.H} · ${navigator.standalone ? 'app' : 'web'}`, get state() { return state; }, get sleep() { return sleep; }, get breath() { return breath; } };
+window.__aura = { G, audio, version: VERSION, screenInfo: () => `${innerWidth}×${innerHeight} · ${screen.width}×${screen.height} · ${G.W}×${G.H} · ${navigator.standalone ? 'app' : 'web'}`, get state() { return state; }, get sleep() { return sleep; }, get breath() { return breath; } };
