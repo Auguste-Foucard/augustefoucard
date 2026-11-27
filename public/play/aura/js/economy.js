@@ -73,12 +73,14 @@ export function newState() {
     universe: { stars: [], flowers: [], galaxies: [], loops: [], constellations: [], auroras: [], nebula: [] },
     settings: { sound: 0.7, music: 0.6, haptics: true, intensity: 1, palette: 'aurora', reduced: false, night: false, lang: null },
     stats: { strokes: 0, created: 0, time: 0, breaths: 0, sleeps: 0 },
-    seen: {}, lastSeen: Date.now(), dawns: 0, quests: {},
+    seen: {}, lastSeen: Date.now(), dawns: 0, quests: {}, sky: [],
   };
 }
 
 // Multiplicateurs dérivés de l'état.
-export const gainMult = (s) => Math.pow(1.22, s.up.gain) * (1 + 0.03 * s.up.particles) * (1 + 0.05 * s.up.resonance) * dawnMult(s);
+export const gainMult = (s) => Math.pow(1.22, s.up.gain) * (1 + 0.03 * s.up.particles) * (1 + 0.05 * s.up.resonance) * dawnMult(s) * skyBonus(s);
+/** Chaque constellation rallumée : +12 % de Lumière pour toujours. */
+export const skyBonus = (s) => 1 + 0.12 * (s.sky || []).length;
 /** Bonus permanent des Nouvelles aubes : +25 % de Lumière par aube. */
 export const dawnMult = (s) => 1 + 0.25 * (s.dawns || 0);
 export const DAWN_LEVEL = 35;

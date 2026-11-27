@@ -23,7 +23,7 @@ export class Universe {
   addFlower(x, y, h, n = 6, s = 1) { this.push(this.u.flowers, { x: this.nx(x), y: this.ny(y), h: h | 0, n, s: +s.toFixed(2), p: +rand(TAU).toFixed(2) }, CAP.flowers); }
   addGalaxy(x, y, h, s = 1) { this.push(this.u.galaxies, { x: this.nx(x), y: this.ny(y), h: h | 0, s: +s.toFixed(2), r: +rand(TAU).toFixed(2), d: Math.random() < 0.5 ? 1 : -1, seed: (Math.random() * 1e6) | 0 }, CAP.galaxies); }
   addLoop(x, y, r, h) { this.push(this.u.loops, { x: this.nx(x), y: this.ny(y), r: +(r / Math.min(this.W, this.H)).toFixed(3), h: h | 0 }, CAP.loops); }
-  addConstellation(nodes, h) { this.push(this.u.constellations, { n: nodes.map((p) => [+this.nx(p.x).toFixed(3), +this.ny(p.y).toFixed(3)]), h: h | 0 }, CAP.constellations); }
+  addConstellation(nodes, h, edges = null, keep = false) { const c = { n: nodes.map((p) => [+this.nx(p.x).toFixed(3), +this.ny(p.y).toFixed(3)]), h: h | 0 }; if (edges) c.e = edges; if (keep) { c.k = 1; this.u.constellations.push(c); } else this.push(this.u.constellations, c, CAP.constellations); }
   addAurora(h) { this.push(this.u.auroras, { h: h | 0, p: +rand(TAU).toFixed(2), y: +rand(0.05, 0.25).toFixed(2) }, CAP.auroras); }
   /** Dépose un peu de couleur dans la nébuleuse : la mémoire visuelle de tous tes gestes. */
   deposit(x, y, h, amount = 1) {
@@ -98,7 +98,7 @@ export class Universe {
     // Constellations.
     ctx.lineWidth = 0.8;
     for (const c of u.constellations) {
-      ctx.globalAlpha = 0.16 * I; ctx.strokeStyle = `hsl(${c.h},${sat()}%,80%)`; ctx.beginPath(); c.n.forEach(([x, y], i) => (i ? ctx.lineTo(x * W, y * H) : ctx.moveTo(x * W, y * H))); ctx.stroke();
+      ctx.globalAlpha = (c.k ? 0.3 : 0.16) * I; ctx.strokeStyle = `hsl(${c.h},${sat()}%,80%)`; ctx.beginPath(); if (c.e) for (const [a, b] of c.e) { ctx.moveTo(c.n[a][0] * W, c.n[a][1] * H); ctx.lineTo(c.n[b][0] * W, c.n[b][1] * H); } else c.n.forEach(([x, y], i) => (i ? ctx.lineTo(x * W, y * H) : ctx.moveTo(x * W, y * H))); ctx.stroke();
       c.n.forEach(([x, y], i) => glow(ctx, x * W, y * H, 7, c.h + i * 15, (0.4 + 0.25 * Math.sin(t * 1.5 + i)) * I));
     }
     // Boucles éternelles.

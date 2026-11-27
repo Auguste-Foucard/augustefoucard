@@ -119,6 +119,8 @@ s'ouvre aussi seul sur `/play/aura/`, où il s'installe sur l'iPhone (Partager �
 | `js/creations.js` · `js/reactions.js` | Animation de chaque forme · effets des harmonies |
 | `js/powers.js` | Feux d'artifice, eau, magnétisme (le kaléidoscope est dans `main.js`) |
 | `js/universe.js` | Univers persistant : étoiles, fleurs, galaxies, nébuleuse |
+| `js/sky.js` | « Rallume le ciel » : les 12 constellations à relier, leur conte et leur récompense |
+| `js/serenity.js` | Respiration guidée et Mode avant de dormir |
 | `js/audio.js` | Son 100 % synthétisé (gamme pentatonique, nappes, réverbération) |
 | `js/i18n.js` | Textes FR / EN |
 
