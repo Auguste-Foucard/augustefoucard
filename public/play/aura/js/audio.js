@@ -224,6 +224,11 @@ class Audio {
   voiceTo(deg, at) { const v = this.voice; if (!v) return; const f = mtof(degreeToMidi(deg - (this.sleepMode ? 5 : 0)) - 12); v.o1.frequency.setTargetAtTime(f, at, 0.07); v.o2.frequency.setTargetAtTime(f * 2, at, 0.07); }
   voiceStop() { const v = this.voice; if (!v) return; this.voice = null; const t = this.ctx.currentTime; v.g.gain.cancelScheduledValues(t); v.g.gain.setValueAtTime(v.g.gain.value, t); v.g.gain.setTargetAtTime(0, t, 0.3); for (const o of [v.o1, v.o2, v.lfo]) o.stop(t + 2); }
 
+  /** Lumière du repos qui arrive : un « ting » cristallin très doux, calé sur le rythme, jamais trop souvent. */
+  passiveChime() {
+    if (!this.ok || !this.ctx || this.sleepMode) return; const now = this.ctx.currentTime; if (now - (this._chimeT || 0) < 4) return; this._chimeT = now;
+    this._chimeDeg = this.snap(12 + ((this._chimeDeg || 0) + 1) % 3); this.noteOnGrid(this._chimeDeg, { kind: 'glass', vel: 0.13, harm: false });
+  }
   /** Note calée sur la grille (gouttes d'eau, etc.). */
   noteOnGrid(degree, opts = {}, div = 2) { if (!this.ctx) return; this.note(degree, { ...opts, at: this.nextTick(div).t }); }
 

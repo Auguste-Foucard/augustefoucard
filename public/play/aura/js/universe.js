@@ -47,11 +47,11 @@ export class Universe {
     }
     this.dirty = false;
   }
-  buildBg() {
-    const c = document.createElement('canvas'); c.width = Math.ceil(this.W / 4); c.height = Math.ceil(this.H / 4); const g = c.getContext('2d');
-    const night = this.s.settings.night || this.sleep; const gr = g.createLinearGradient(0, 0, 0, c.height);
+  /** Dégradé du fond, dessiné en pleine résolution (pas d'image agrandie, donc pas de bandes). */
+  buildBg(ctx) {
+    const night = this.s.settings.night || this.sleep; const gr = ctx.createLinearGradient(0, 0, 0, this.H);
     gr.addColorStop(0, night ? '#0b0608' : '#06060f'); gr.addColorStop(0.6, night ? '#0d0709' : '#080714'); gr.addColorStop(1, night ? '#120a09' : '#0d0a1a');
-    g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height); this.bg = c;
+    this.bg = gr;
   }
   galaxySprite(gx) {
     if (this.galaxySprites.has(gx.seed)) return this.galaxySprites.get(gx.seed);
@@ -74,8 +74,8 @@ export class Universe {
 
   draw(ctx, t, G) {
     const W = this.W, H = this.H; const u = this.u; const I = G.intensity;
-    if (!this.bg) this.buildBg();
-    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(this.bg, 0, 0, W, H);
+    if (!this.bg) this.buildBg(ctx);
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.fillStyle = this.bg; ctx.fillRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'lighter';
     if (this.dirty && (!this._nebT || t - this._nebT > 0.8)) { this._nebT = t; this.buildNebula(); }
     if (u.nebula.length) {

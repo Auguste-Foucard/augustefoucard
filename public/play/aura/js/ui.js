@@ -68,7 +68,10 @@ export class UI {
 
   // ---------- HUD ----------
   hud() {
-    const s = this.s; const v = Math.floor(s.light);
+    const s = this.s;
+    // Le chiffre défile en douceur vers sa vraie valeur au lieu de sauter.
+    this.shown = this.shown === undefined || Math.abs(s.light - this.shown) > s.light * 0.5 + 500 ? s.light : this.shown + (s.light - this.shown) * 0.38;
+    const v = Math.floor(Math.abs(s.light - this.shown) < 0.5 ? s.light : this.shown);
     if (v !== this.lastVal) { this.lastVal = v; this.$('val').textContent = this.fmt(v); }
     this.$('lv').textContent = s.level;
     const a = xpFor(s.level), b = xpFor(s.level + 1); const k = Math.min(1, (s.total - a) / Math.max(1, b - a));
@@ -78,6 +81,8 @@ export class UI {
     if (!this.$('sheetWrap').hidden && this.tab === 'evolve' && (this._lastEv ?? -1) !== v) { this._lastEv = v; this.refreshCosts(); }
   }
   counterPos() { const r = this.$('lv').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+  /** Petit scintillement du compteur quand la lumière du repos arrive : discret. */
+  glint() { const c = this.$('counter'); c.classList.remove('glint'); void c.offsetWidth; c.classList.add('glint'); }
   pulse() { const c = this.$('counter'); c.classList.remove('pulse'); void c.offsetWidth; c.classList.add('pulse'); }
   drawing(on) { clearTimeout(this.idle); if (on) document.body.classList.add('drawing'); else this.idle = setTimeout(() => document.body.classList.remove('drawing'), 1400); }
   flashPower() { const p = POWERS.find((x) => x.id === this.s.power); const c = this.$('chip'); c.innerHTML = svg(p.id, 16) + '<span>' + L(p.name) + '</span>'; c.classList.remove('show'); void c.offsetWidth; c.classList.add('show'); }

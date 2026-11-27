@@ -40,7 +40,7 @@ state.settings.night = false; // l'ancien interrupteur est fondu dans le « Mode
 // ---------- Contexte partagé ----------
 const G = {
   P: new Particles(6000), W: 1, H: 1, dpr: 1, t: 0, state, creations: [], effects: [], filaments: [], motes: [],
-  prof: {}, exposure: 1, mode: 'play', quality: 1, intensity: 1, reduced: false, audioOn: false,
+  prof: {}, passivePool: 0, exposure: 1, mode: 'play', quality: 1, intensity: 1, reduced: false, audioOn: false,
   pm: 1, lifeMult: 1, trailMult: 1, burstMult: 1, bloom: 0, bursts: 0, colors: 0, strands: 1, reactWindow: 8, reactDist: 200, chain: 0, lastReact: -99,
   get level() { return state.level; },
   formLevel: (type) => FORM[type]?.level ?? 1,
@@ -299,7 +299,19 @@ function frame(now) {
   }
 
   // Production passive (secondaire) et lueurs qui en témoignent.
-  const pr = passiveRate(state); if (pr > 0) { earn(pr * dt, 0, 0, 'passive', true); passiveVisT -= dt; if (passiveVisT < 0 && G.mode === 'play') { passiveVisT = rand(2, 4); const s = G.universe.randomSource(); if (s) G.motes.push({ x0: s.x, y0: s.y, t0: G.t, d: 1.8, h: s.h, soft: true }); } }
+  // Lumière produite au repos : elle s'accumule, puis une lueur l'apporte de l'univers jusqu'au compteur.
+  const pr = passiveRate(state);
+  if (pr > 0) {
+    G.passivePool += pr * dt; passiveVisT -= dt;
+    if (G.mode !== 'play') { earn(G.passivePool, 0, 0, 'passive', true); G.passivePool = 0; }
+    else if (passiveVisT < 0) {
+      passiveVisT = clamp(5 / Math.sqrt(pr), 1.6, 6) * rand(0.8, 1.25);
+      const src = G.universe.randomSource();
+      if (src) { glowsQ.push({ x: src.x, y: src.y, h: src.h, t: G.t, r: 9, a: 0.7 }); G.motes.push({ x0: src.x, y0: src.y, t0: G.t + 0.35, d: 2.3, h: src.h, soft: true, carry: G.passivePool, trail: true }); }
+      else earn(G.passivePool, 0, 0, 'passive', true);
+      G.passivePool = 0;
+    }
+  }
 
   // Mise à jour.
   G.P.attractors.length = 0;
@@ -322,7 +334,7 @@ function frame(now) {
   ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0);
   G.universe.draw(ctx, G.t, G); mark('universe');
   ctx.globalCompositeOperation = 'lighter';
-  for (const g of glowsQ) { const a = G.t - g.t; if (a < 1.6) glow(ctx, g.x, g.y, 18 + a * 20, g.h, 0.5 * (1 - a / 1.6)); }
+  for (const g of glowsQ) { const a = G.t - g.t; if (a < 1.6) glow(ctx, g.x, g.y, (g.r || 18) + a * (g.r ? 10 : 20), g.h, 0.5 * (g.a || 1) * Math.sin(Math.PI * Math.min(1, a / 1.6)) * (g.r ? 1.6 : 1)); }
   for (let i = glowsQ.length - 1; i >= 0; i--) if (G.t - glowsQ[i].t > 1.6) glowsQ.splice(i, 1);
   sand.draw(ctx);
   ripples.draw(ctx);
@@ -362,14 +374,21 @@ function drawLive() {
 /** Petites lueurs qui volent vers le compteur de Lumière : la récolte, sans chiffres à l'écran. */
 function drawMotes() {
   const tgt = ui.counterPos();
+  const pos = (m, k) => { const e = k * k * (3 - 2 * k); const cx = (m.x0 + tgt.x) / 2 + (m.y0 - tgt.y) * 0.25, cy = Math.min(m.y0, tgt.y) - 40; return [(1 - e) * (1 - e) * m.x0 + 2 * (1 - e) * e * cx + e * e * tgt.x, (1 - e) * (1 - e) * m.y0 + 2 * (1 - e) * e * cy + e * e * tgt.y]; };
   for (let i = G.motes.length - 1; i >= 0; i--) {
     const m = G.motes[i]; const k = (G.t - m.t0) / m.d; if (k < 0) continue;
-    if (k >= 1) { G.motes.splice(i, 1); if (!m.soft) ui.pulse(); continue; }
-    const e = k * k * (3 - 2 * k); const cx = (m.x0 + tgt.x) / 2 + (m.y0 - tgt.y) * 0.25, cy = Math.min(m.y0, tgt.y) - 40;
-    const x = (1 - e) * (1 - e) * m.x0 + 2 * (1 - e) * e * cx + e * e * tgt.x, y = (1 - e) * (1 - e) * m.y0 + 2 * (1 - e) * e * cy + e * e * tgt.y;
-    glow(ctx, x, y, m.soft ? 5 : 8, m.h, (m.soft ? 0.35 : 0.8) * Math.sin(Math.PI * Math.min(1, k * 1.2)));
+    if (k >= 1) {
+      G.motes.splice(i, 1);
+      if (m.carry) { earn(m.carry, 0, 0, 'passive', true); ui.glint(); if (G.audioOn && !ptrs.size) audio.passiveChime(); } // le compteur monte à l'arrivée
+      else if (!m.soft) ui.pulse();
+      continue;
+    }
+    const fade = Math.sin(Math.PI * Math.min(1, k * 1.2));
+    if (m.trail) for (let j = 1; j <= 6; j++) { const kk = k - j * 0.025; if (kk <= 0) break; const [tx, ty] = pos(m, kk); glow(ctx, tx, ty, 4.2 - j * 0.45, m.h, 0.22 * fade * (1 - j / 7)); }
+    const [x, y] = pos(m, k);
+    glow(ctx, x, y, m.trail ? 6 : m.soft ? 5 : 8, m.h, (m.trail ? 0.6 : m.soft ? 0.35 : 0.8) * fade);
   }
-  if (G.motes.length > 80) G.motes.splice(0, G.motes.length - 80);
+  if (G.motes.length > 80) { for (const m of G.motes.splice(0, G.motes.length - 80)) if (m.carry) G.passivePool += m.carry; } // rien ne se perd
 }
 
 // ---------- Cycle de vie ----------

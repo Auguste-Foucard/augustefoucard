@@ -163,3 +163,9 @@ body.leaving canvas#c, body.leaving #ui { opacity: 0; transition: opacity 0.8s e
 .pow.sleepcard { border-color: rgba(255, 176, 120, 0.45); background: linear-gradient(135deg, rgba(255, 150, 90, 0.16), rgba(200, 90, 140, 0.1)); }
 .pow.sleepcard .pi { color: #ffc49a; background: rgba(255, 170, 110, 0.12); }
 .pow.sleepcard .pick { border-color: rgba(255, 176, 120, 0.45); background: rgba(255, 160, 100, 0.12); }
+
+/* Lumière du repos qui arrive : le compteur scintille doucement. */
+.counter.glint .val b { animation: glint 0.9s ease; }
+.counter.glint .ring-fg { animation: glintRing 0.9s ease; }
+@keyframes glint { 30% { text-shadow: 0 0 18px rgba(230, 215, 255, 0.95), 0 0 4px #fff; color: #fff; } }
+@keyframes glintRing { 30% { filter: drop-shadow(0 0 9px var(--accent)); } }
