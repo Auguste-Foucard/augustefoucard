@@ -5,35 +5,35 @@ import { SKY } from './sky.js';
 const sum = (o) => Object.values(o || {}).reduce((a, b) => a + b, 0);
 const F = (type, n, fr, en, tab = null) => ({ kind: 'form', type, n, name: { fr, en }, rel: true, metric: (s) => s.forms[type] || 0, tab });
 const LV = (n, fr, en) => ({ kind: 'level', n, name: { fr, en }, metric: (s) => s.level, tab: null });
-const SK = (id) => { const c = SKY.find((x) => x.id === id); return { kind: 'sky', id, n: 1, name: { fr: 'Réveille ' + c.name.fr, en: 'Awaken ' + c.name.en }, metric: (s) => ((s.sky || []).includes(id) ? 1 : 0), tab: 'sky' }; };
+const SK = (id) => { const c = SKY.find((x) => x.id === id); return { kind: 'sky', id, n: 1, name: { fr: 'Rallume ' + c.name.fr, en: 'Light up ' + c.name.en }, metric: (s) => ((s.sky || []).includes(id) ? 1 : 0), tab: 'sky' }; };
 const PW = (id, fr, en) => ({ kind: 'power', id, n: 1, name: { fr, en }, rel: true, metric: (s) => (s.stats.powers || {})[id] || 0, tab: 'powers' });
 const X = (kind, n, metric, fr, en, tab = null, rel = true) => ({ kind, n, metric, name: { fr, en }, rel, tab });
 
 export const OBJECTIVES = [
-  F('line', 1, 'Trace une ligne de lumière', 'Draw a line of light'),
+  F('line', 1, 'Trace une ligne', 'Draw a line'),
   F('line', 3, 'Trace 3 lignes', 'Draw 3 lines'),
   LV(2, 'Atteins le niveau 2', 'Reach level 2'),
   F('circle', 1, 'Dessine un cercle', 'Draw a circle'),
-  X('buy', 1, (s) => sum(s.up), 'Éveille une amélioration (Évolution)', 'Awaken an upgrade (Evolve)', 'evolve'),
+  X('buy', 1, (s) => sum(s.up), 'Achète une amélioration (Évolution)', 'Buy an upgrade (Evolve)', 'evolve'),
   SK('plume'),
   LV(3, 'Atteins le niveau 3', 'Reach level 3'),
   F('wave', 1, 'Dessine une vague', 'Draw a wave'),
   PW('fireworks', 'Essaie les Feux d’artifice (Pouvoirs)', 'Try Fireworks (Powers)'),
   SK('oiseau'),
-  X('combo', 1, (s) => Object.keys(s.combos).length, 'Découvre une harmonie : 3 cercles d’affilée', 'Discover a harmony: 3 circles in a row', null),
+  X('combo', 1, (s) => Object.keys(s.combos).length, 'Trouve une harmonie : 3 cercles d’affilée', 'Find a harmony: 3 circles in a row', null),
   F('spiral', 1, 'Dessine une spirale', 'Draw a spiral'),
   SK('barque'),
   PW('water', 'Essaie l’Eau (Pouvoirs)', 'Try Water (Powers)'),
   F('triangle', 1, 'Dessine un triangle', 'Draw a triangle'),
   SK('couronne'),
   F('star', 1, 'Dessine une étoile', 'Draw a star'),
-  X('cosmic', 1, (s) => s.combos.cosmic || 0, 'Fais naître une explosion cosmique : un cercle et une étoile', 'Make a cosmic bloom: a circle and a star'),
+  X('cosmic', 1, (s) => s.combos.cosmic || 0, 'Dessine un cercle puis une étoile, l’un près de l’autre', 'Draw a circle and a star close together'),
   PW('magnet', 'Essaie le Magnétisme (Pouvoirs)', 'Try Magnetism (Powers)'),
   SK('lanterne'),
   PW('kaleido', 'Essaie le Kaléidoscope (Pouvoirs)', 'Try the Kaleidoscope (Powers)'),
   F('flower', 1, 'Dessine une fleur', 'Draw a flower'),
   SK('phare'),
-  X('breathe', 1, (s) => s.stats.breaths || 0, 'Respire avec la fleur de lumière (Sérénité)', 'Breathe with the flower of light (Serenity)', 'calm'),
+  X('breathe', 1, (s) => s.stats.breaths || 0, 'Fais un exercice de respiration (Sérénité)', 'Do a breathing exercise (Serenity)', 'calm'),
   SK('cle'),
   F('heart', 1, 'Dessine un cœur', 'Draw a heart'),
   SK('arbre'),
@@ -41,7 +41,7 @@ export const OBJECTIVES = [
   SK('cerf'),
   F('mandala', 1, 'Dessine une forme fermée en Kaléidoscope', 'Draw a closed shape in Kaleidoscope'),
   SK('harpe'),
-  X('dawn', 1, (s) => s.dawns || 0, 'Fais naître une Nouvelle aube (Évolution)', 'Bring a New dawn (Evolve)', 'evolve'),
+  X('dawn', 1, (s) => s.dawns || 0, 'Fais une Nouvelle aube (Évolution)', 'Do a New dawn (Evolve)', 'evolve'),
   SK('baleine'),
   SK('coeur'),
 ];
