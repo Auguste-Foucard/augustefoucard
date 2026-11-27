@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/aura-version.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "audio:demo": "node scripts/generate-demo-audio.mjs",

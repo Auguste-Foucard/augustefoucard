@@ -168,6 +168,7 @@ export class UI {
       <p class="note">${t('silentHint')}</p>
       ${iOS && !standalone ? `<p class="note">${t('install')}</p>` : ''}
       <button class="reset" data-reset>${t('reset')}</button>
+      <p class="note ver">${t('version')} ${window.__aura?.version && !window.__aura.version.startsWith('__') ? window.__aura.version : 'dev'}</p>
     </div>`;
   }
 

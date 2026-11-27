@@ -11,10 +11,11 @@ import { haptic, setHaptics } from './haptics.js';
 import { FORM, FORMS, POWER, POWERS, newState, earn as earnState, formValue, gainMult, comboMult, passiveRate, UPGRADE, upCost, reqMet } from './economy.js';
 import { t, L, setLang, lang } from './i18n.js';
 import { UI } from './ui.js';
+import { playIntro } from './intro.js';
 
 const SAVE_KEY = 'aura.save.v1';
 const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+const ctx = canvas.getContext('2d', { alpha: false });
 
 // ---------- État ----------
 function load() {
@@ -143,7 +144,7 @@ function firstTouch() {
 }
 
 canvas.addEventListener('pointerdown', (e) => {
-  e.preventDefault(); firstTouch();
+  e.preventDefault(); firstTouch(); if (skipIntro) { skipIntro(); haptic('soft'); }
   if ((G.mode === 'free') && e.clientX > G.W - 64 && e.clientY < 64) { startMode('play'); return; }
   canvas.setPointerCapture?.(e.pointerId);
   const p = { id: e.pointerId, x: e.clientX, y: e.clientY, raw: [{ x: e.clientX, y: e.clientY }], vis: [], t0: G.t, last: performance.now(), lx: e.clientX, ly: e.clientY, dist: 0, power: state.power, h: hue(Math.random()), hapD: 0 };
@@ -356,8 +357,19 @@ addEventListener('pagehide', save);
   }
 }
 
-refresh(); ui.render(); if (!state.seen.intro) ui.showIntro();
+refresh(); ui.render();
 document.body.dataset.mode = 'play';
+
+// ---------- Entrée dans la bulle ----------
+const QS = new URLSearchParams(location.search);
+let quickIntro = false; try { quickIntro = sessionStorage.getItem('aura.quick') === '1'; sessionStorage.removeItem('aura.quick'); } catch { /* indisponible */ }
+let skipIntro = null;
+if (DEMO || QS.has('nointro')) { document.body.classList.remove('entering'); document.getElementById('boot')?.remove(); if (!state.seen.intro) ui.showIntro(); }
+else skipIntro = playIntro({
+  still: QS.has('splash'), quick: quickIntro, reduced: state.settings.reduced,
+  onEnter: () => { if (G.audioOn) audio.enter(); },
+  onDone: () => { skipIntro = null; if (!state.seen.intro) setTimeout(() => ui.showIntro(), 300); },
+});
 requestAnimationFrame((n) => { last = n; frame(n); });
 
 // Démo automatique pour les captures (?demo=1) : quelques formes dessinées seules.
@@ -368,5 +380,34 @@ if (DEMO) {
   if (q.has('clean')) startMode('free');
 }
 
-if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('./sw.js').catch(() => {});
-window.__aura = { G, get state() { return state; } };
+// ---------- Mises à jour ----------
+// L'app installée sur l'écran d'accueil reste souvent ouverte en arrière-plan : à chaque retour,
+// on compare sa version à celle en ligne et on recharge en douceur (la progression est sauvegardée avant).
+const VERSION = document.querySelector('meta[name="aura-version"]')?.content || '';
+const VERSIONED = /^[0-9a-f]{10}$/.test(VERSION);
+let swReg = null; let updating = false; let lastCheck = 0;
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((r) => (swReg = r)).catch(() => {});
+async function checkUpdate(force = false) {
+  if (!VERSIONED || updating || DEMO || !navigator.onLine) return;
+  const now = Date.now(); if (!force && now - lastCheck < 60_000) return; lastCheck = now;
+  try {
+    swReg?.update().catch(() => {});
+    const r = await fetch('./version.json?t=' + now, { cache: 'no-store' }); if (!r.ok) return;
+    const { version } = await r.json();
+    let tried = null; try { tried = sessionStorage.getItem('aura.upd'); } catch { /* indisponible */ }
+    // Déjà rechargé pour cette version sans la recevoir (cache réseau en retard) : on n'insiste pas en boucle.
+    if (version && version !== VERSION && version !== tried) applyUpdate(version);
+  } catch { /* hors ligne : on réessaiera plus tard */ }
+}
+function applyUpdate(target) {
+  if (ptrs.size || G.mode === 'breathe') { setTimeout(() => applyUpdate(target), 1500); return; } // jamais au milieu d'un geste
+  try { sessionStorage.setItem('aura.upd', target); sessionStorage.setItem('aura.quick', '1'); } catch { /* indisponible */ }
+  updating = true; save(); ui.toast(t('updating'), '', 1400, 4);
+  document.body.classList.add('leaving'); setTimeout(() => location.reload(), 900);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(true); });
+addEventListener('focus', () => checkUpdate());
+addEventListener('online', () => checkUpdate(true));
+setInterval(() => { if (!document.hidden) checkUpdate(); }, 10 * 60_000);
+setTimeout(() => checkUpdate(true), 4000);
+window.__aura = { G, version: VERSION, get state() { return state; } };

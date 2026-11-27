@@ -24,6 +24,7 @@ const S = {
     stats: '{s} gestes · {c} créations · {u} lumières dans ton univers',
     passive: '{v} / s en rayonnement',
     perLevel: 'par niveau',
+    updating: 'Nouvelle version d’AURA…', version: 'Version',
   },
   en: {
     light: 'Light', level: 'Level',
@@ -49,6 +50,7 @@ const S = {
     stats: '{s} gestures · {c} creations · {u} lights in your universe',
     passive: '{v} / s radiance',
     perLevel: 'per level',
+    updating: 'New version of AURA…', version: 'Version',
   },
 };
 
