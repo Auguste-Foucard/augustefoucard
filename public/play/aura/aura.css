@@ -169,3 +169,15 @@ body.leaving canvas#c, body.leaving #ui { opacity: 0; transition: opacity 0.8s e
 .counter.glint .ring-fg { animation: glintRing 0.9s ease; }
 @keyframes glint { 30% { text-shadow: 0 0 18px rgba(230, 215, 255, 0.95), 0 0 4px #fff; color: #fff; } }
 @keyframes glintRing { 30% { filter: drop-shadow(0 0 9px var(--accent)); } }
+
+/* Nouvelle aube */
+.up.dawn { border-color: rgba(255, 205, 130, 0.45); background: linear-gradient(135deg, rgba(255, 190, 110, 0.14), rgba(255, 140, 170, 0.08)); }
+.up.dawn .buy { background: linear-gradient(120deg, rgba(255, 200, 120, 0.3), rgba(255, 150, 170, 0.2)); border-color: rgba(255, 205, 130, 0.5); }
+/* Le Chemin */
+.quests { display: flex; flex-direction: column; gap: 6px; }
+.quest { display: grid; gap: 6px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); }
+.quest .qn { font-size: 13px; color: var(--ink); } .quest .qn em { color: var(--accent2); font-style: normal; font-size: 12px; }
+.quest.done { opacity: 0.6; } .quest.done .qn { color: var(--accent); }
+.qbar { height: 4px; border-radius: 4px; background: var(--faint); overflow: hidden; }
+.qbar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+.pals button:disabled { opacity: 0.45; }

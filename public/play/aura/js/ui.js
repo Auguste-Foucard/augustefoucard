@@ -1,5 +1,5 @@
 // Interface minimaliste : un compteur discret, trois accès, une feuille qui glisse et disparaît.
-import { FORMS, POWERS, COMBOS, UPGRADES, UPGRADE, upCost, reqMet, xpFor, passiveRate } from './economy.js';
+import { FORMS, POWERS, COMBOS, UPGRADES, UPGRADE, upCost, reqMet, xpFor, passiveRate, QUESTS, PALETTE_UNLOCK, dawnGain, DAWN_LEVEL } from './economy.js';
 import { PALETTES } from './fx.js';
 import { PATTERNS } from './serenity.js';
 import { glyph } from './shapes.js';
@@ -120,7 +120,9 @@ export class UI {
   tab_evolve() {
     const s = this.s; const branches = [['gesture', t('branchGesture')], ['light', t('branchLight')], ['harmony', t('branchHarmony')]];
     const pr = passiveRate(s);
-    return `<div class="sum"><span>${this.fmt(s.light)} <small>${t('light')}</small></span>${pr > 0 ? `<small>${t('passive', { v: this.fmt(pr) })}</small>` : ''}</div>` + branches.map(([b, name]) => `
+    const g = dawnGain(s); const dawnCard = `<article class="up dawn ${g ? '' : 'locked'}"><div class="up-t"><b>☀︎ ${t('dawnTitle')}</b>${s.dawns ? `<span class="lvl">${t('dawnHave', { n: s.dawns, p: 25 * s.dawns })}</span>` : ''}</div><p>${t('dawnDesc')}</p>
+      <div class="up-b"><small>${g ? '' : t('dawnLocked', { n: DAWN_LEVEL })}</small>${g ? `<button class="buy" data-dawn>${t('dawnBtn', { n: g })}</button>` : `<span class="lockd">${svg('lock', 14)}</span>`}</div></article>`;
+    return `<div class="sum"><span>${this.fmt(s.light)} <small>${t('light')}</small></span>${pr > 0 ? `<small>${t('passive', { v: this.fmt(pr) })}</small>` : ''}</div>` + (s.level >= 20 || s.dawns ? dawnCard : '') + branches.map(([b, name]) => `
       <section class="branch"><h3>${name}</h3>${UPGRADES.filter((u) => u.branch === b).map((u) => this.upCard(u)).join('')}</section>`).join('');
   }
   upCard(u) {
@@ -149,6 +151,8 @@ export class UI {
       <div class="forms">${FORMS.map((f) => { const ok = s.level >= f.level; return `<div class="form ${ok ? '' : 'locked'}" title="${L(f.desc)}">${glyphSvg(f.id)}<b>${ok ? L(f.name) : t('unknown')}</b><small>${ok ? (s.forms[f.id] ? '× ' + s.forms[f.id] : '—') : t('atLevel', { n: f.level })}</small></div>`; }).join('')}</div>
       <h3>${t('combos')} <small>${found} / ${COMBOS.length}</small></h3>
       <div class="combos">${COMBOS.map((c) => { const ok = !!s.combos[c.id]; const recipe = Object.entries(c.need).map(([k, n]) => (n > 1 ? n + ' × ' : '') + L(FORMS.find((f) => f.id === k).name)).join(' + '); return `<div class="combo ${ok ? 'found' : ''}"><b>${ok ? L(c.name) : t('unknown')}</b><small>${ok ? recipe : L(c.hint)}</small></div>`; }).join('')}</div>
+      <h3>${t('path')} <small>${QUESTS.filter((q) => s.quests[q.id]).length} / ${QUESTS.length}</small></h3>
+      <div class="quests">${QUESTS.map((q) => ({ q, v: Math.min(q.goal, q.metric(s)), done: !!s.quests[q.id] })).sort((a, b) => (a.done - b.done) || (b.v / b.q.goal - a.v / a.q.goal)).map(({ q, v, done }) => `<div class="quest ${done ? 'done' : ''}"><span class="qn">${done ? '✦ ' : ''}${L(q.name)}${q.palette ? ` <em>· ${L(PALETTES[q.palette].name)}</em>` : ''}</span><span class="qbar"><i style="width:${Math.round((v / q.goal) * 100)}%"></i></span></div>`).join('')}</div>
       <p class="stats">${t('stats', { s: s.stats.strokes, c: s.stats.created, u: lights })}</p>`;
   }
 
@@ -172,7 +176,7 @@ export class UI {
     return `<div class="settings">
       ${range('sound', t('sound'))}${range('music', t('music'))}${range('intensity', t('intensity'))}
       ${tog('haptics', t('haptics'))}${tog('reduced', t('reduced'))}
-      <div class="row col"><span>${t('palette')}</span><div class="pals">${Object.entries(PALETTES).map(([id, p]) => `<button data-pal="${id}" aria-pressed="${st.palette === id}" style="--g:linear-gradient(90deg,${p.stops.map((h) => `hsl(${h},${p.sat}%,70%)`).join(',')})"><i></i>${L(p.name)}</button>`).join('')}</div></div>
+      <div class="row col"><span>${t('palette')}</span><div class="pals">${Object.entries(PALETTES).map(([id, p]) => { const locked = PALETTE_UNLOCK[id] && !this.s.quests[PALETTE_UNLOCK[id]]; return `<button data-pal="${id}" aria-pressed="${st.palette === id}" ${locked ? `disabled title="${t('paletteLocked')}"` : ''} style="--g:linear-gradient(90deg,${p.stops.map((h) => `hsl(${h},${p.sat}%,70%)`).join(',')})"><i></i>${L(p.name)}${locked ? ' ' + svg('lock', 11) : ''}</button>`; }).join('')}</div></div>
       <div class="row"><span>${t('lang')}</span><div class="seg"><button data-lang="fr" aria-pressed="${lang === 'fr'}">FR</button><button data-lang="en" aria-pressed="${lang === 'en'}">EN</button></div></div>
       <p class="note">${t('silentHint')}</p>
       ${iOS && !standalone ? `<p class="note">${t('install')}</p>` : ''}
@@ -184,6 +188,7 @@ export class UI {
   onBody(e) {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.buy) { if (this.act.buy(b.dataset.buy)) this.render(); return; }
+    if (b.dataset.dawn !== undefined) { if (confirm(t('dawnConfirm', { n: dawnGain(this.s) }))) { this.act.dawn(); this.closeSheet(); } return; }
     if (b.dataset.power) { this.act.setPower(b.dataset.power); this.closeSheet(); return; }
     if (b.dataset.mode) { this.act.startMode(b.dataset.mode); return; }
     if (b.dataset.sleep) { this.act.startMode('sleep', +b.dataset.sleep); return; }

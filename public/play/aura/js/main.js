@@ -8,7 +8,8 @@ import { Universe } from './universe.js';
 import { Charge, Ripples, Sand } from './powers.js';
 import { audio } from './audio.js';
 import { haptic, setHaptics } from './haptics.js';
-import { FORM, FORMS, POWER, POWERS, newState, earn as earnState, formValue, gainMult, comboMult, passiveRate, UPGRADE, upCost, reqMet } from './economy.js';
+import { FORM, FORMS, POWER, POWERS, newState, earn as earnState, formValue, gainMult, comboMult, passiveRate, UPGRADE, upCost, reqMet, QUESTS, questReward, PALETTE_UNLOCK, dawnGain, DAWN_LEVEL } from './economy.js';
+import { PALETTES } from './fx.js';
 import { t, L, setLang, lang } from './i18n.js';
 import { UI } from './ui.js';
 import { playIntro } from './intro.js';
@@ -39,7 +40,7 @@ state.settings.night = false; // l'ancien interrupteur est fondu dans le « Mode
 
 // ---------- Contexte partagé ----------
 const G = {
-  P: new Particles(6000), W: 1, H: 1, dpr: 1, t: 0, state, creations: [], effects: [], filaments: [], motes: [],
+  P: new Particles(4500), W: 1, H: 1, dpr: 1, t: 0, state, creations: [], effects: [], filaments: [], motes: [],
   prof: {}, passivePool: 0, exposure: 1, mode: 'play', quality: 1, intensity: 1, reduced: false, audioOn: false,
   pm: 1, lifeMult: 1, trailMult: 1, burstMult: 1, bloom: 0, bursts: 0, colors: 0, strands: 1, reactWindow: 8, reactDist: 200, chain: 0, lastReact: -99,
   get level() { return state.level; },
@@ -57,7 +58,8 @@ function refresh() {
   G.reduced = set.reduced;
   const sleeping = G.mode === 'sleep';
   G.intensity = set.intensity * (set.night ? 0.72 : 1) * (sleeping ? 0.5 : 1);
-  G.pm = (1 + 0.3 * u.particles) * (0.45 + 0.55 * set.intensity) * G.quality * (set.reduced ? 0.55 : 1) * (set.night ? 0.75 : 1) * (sleeping ? 0.5 : 1);
+  G.pmBase = (1 + 0.3 * u.particles) * (0.45 + 0.55 * set.intensity) * G.quality * (set.reduced ? 0.55 : 1) * (set.night ? 0.75 : 1) * (sleeping ? 0.5 : 1);
+  G.pm = G.pmBase * (G.lod ?? 1);
   G.lifeMult = 1 + 0.25 * u.life; G.trailMult = 1 + 0.25 * u.trails; G.burstMult = 1 + 0.12 * u.bursts; G.bloom = u.bloom; G.bursts = u.bursts; G.colors = u.colors; G.trails = u.trails;
   G.strands = Math.min(4, 1 + Math.floor(u.trails / 3) + (u.particles >= 6 ? 1 : 0));
   G.reactWindow = 8 + 1.2 * u.links; G.reactDist = Math.min(G.W, G.H) * (0.28 + 0.04 * u.links);
@@ -95,7 +97,7 @@ window.visualViewport?.addEventListener('resize', resize);
 setTimeout(resize, 400); // iOS finit parfois de mesurer après le premier affichage
 
 // ---------- Lumière ----------
-const ui = new UI(G, { buy, setPower, setSetting, startMode, reset, save: () => (dirty = true) });
+const ui = new UI(G, { buy, setPower, setSetting, startMode, reset, dawn, save: () => (dirty = true) });
 
 function earn(amount, x = 0, y = 0, src = '', quiet = false) {
   if (!(amount > 0)) return;
@@ -141,11 +143,38 @@ function buy(id) {
 }
 function setPower(id) { if (POWER[id] && state.level >= POWER[id].level) { state.power = id; dirty = true; audio.ui(); ui.render(); ui.flashPower(); } }
 function setSetting(k, v) {
+  if (k === 'palette' && PALETTE_UNLOCK[v] && !state.quests[PALETTE_UNLOCK[v]]) return;
   state.settings[k] = v; if (k === 'lang') setLang(v); dirty = true;
   if (k === 'night' || k === 'palette') { G.universe.bg = null; G.universe.dirty = true; G.universe.galaxySprites.clear(); }
   refresh(); ui.render();
 }
 function reset() { localStorage.removeItem(SAVE_KEY); state = newState(); location.reload(); }
+
+// ---------- Nouvelle aube ----------
+/** Recommencer la progression en gardant l'univers et la collection : bonus permanent de Lumière. */
+function dawn() {
+  const g = dawnGain(state); if (g < 1) return false;
+  state.dawns = (state.dawns || 0) + g;
+  state.light = 0; state.total = 0; state.level = 1; for (const k in state.up) state.up[k] = 0; state.power = 'filaments';
+  G.universe.addStar(G.W / 2, G.H * 0.3, 45, 3.2); // un soleil doré pour se souvenir de chaque aube
+  G.creations.length = 0; G.filaments.length = 0; G.motes.length = 0;
+  burst(G.P, G.W / 2, G.H * 0.3, { n: Math.round(160 * G.pm), speed: 260, life: 3.2, s: 5, h: 45, spread: 0.6, k: 1, hd: 30 });
+  audio.levelUp(); haptic('strong'); dirty = true; save(); refresh(); ui.render();
+  ui.toast(t('dawnDone', { n: state.dawns }), t('dawnBonus', { p: Math.round(25 * state.dawns) }), 4500, 4);
+  return true;
+}
+
+// ---------- Le Chemin ----------
+let questT = 2;
+function checkQuests(dt) {
+  questT -= dt; if (questT > 0 || G.mode !== 'play') return; questT = 2;
+  for (const q of QUESTS) {
+    if (state.quests[q.id] || q.metric(state) < q.goal) continue;
+    state.quests[q.id] = 1; dirty = true; const r = questReward(state, q); earn(r, G.W / 2, G.H * 0.2, 'quest');
+    const sub = q.palette ? t('paletteUnlocked', { p: L(PALETTES[q.palette].name) }) : '+ ' + ui.fmt(r) + ' ' + t('light').toLowerCase();
+    ui.toast(t('pathDone') + ' · ' + L(q.name), sub, 3800, 2); audio.note(12, { kind: 'bell', vel: 0.3 }); break; // un à la fois, sans avalanche
+  }
+}
 
 // ---------- Modes ----------
 let breath = null; let sleep = null; let autoT = 0;
@@ -157,9 +186,9 @@ function startMode(m, opt) {
   if (m === 'breathe' || m === 'sleep') for (const c of G.creations) c.life = Math.min(c.life, c.age + 1.2);
   if (m === 'breathe') breath = new Breath(G, opt || 'calm', {
     label: (id, sub) => ui.breath(t(id), sub),
-    done: (n) => { earn(n * 3 * gainMult(state), G.W / 2, G.H / 2, 'breath', true); ui.toast(t('breathDone', { n }), t('constellationBorn'), 4200, 3); setTimeout(() => G.mode === 'breathe' && startMode('play'), 600); },
+    done: (n) => { state.stats.breaths = (state.stats.breaths || 0) + 1; earn(n * 3 * gainMult(state), G.W / 2, G.H / 2, 'breath', true); ui.toast(t('breathDone', { n }), t('constellationBorn'), 4200, 3); setTimeout(() => G.mode === 'breathe' && startMode('play'), 600); },
   });
-  if (m === 'sleep') { sleep = new Sleep(G, opt || 30, { end: () => {} }); ui.breath('', ''); }
+  if (m === 'sleep') { sleep = new Sleep(G, opt || 30, { end: () => {} }); ui.breath('', ''); state.stats.sleeps = (state.stats.sleeps || 0) + 1; dirty = true; }
   if (m === 'sleep' || wasCalm) { G.universe.sleep = m === 'sleep'; G.universe.bg = null; G.universe.dirty = true; G.universe.galaxySprites.clear(); refresh(); }
   autoT = m === 'sleep' ? 8 : 1.5; ui.render();
 }
@@ -180,7 +209,7 @@ canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault(); firstTouch(); if (skipIntro) { skipIntro(); haptic('soft'); }
   if (sleep && sleep.ended) { startMode('play'); return; }
   if ((G.mode === 'free') && e.clientX > G.W - 64 && e.clientY < 64) { startMode('play'); return; }
-  canvas.setPointerCapture?.(e.pointerId);
+  try { canvas.setPointerCapture?.(e.pointerId); } catch { /* toucher déjà terminé : on continue sans capture */ }
   const p = { id: e.pointerId, x: e.clientX, y: e.clientY, raw: [{ x: e.clientX, y: e.clientY }], vis: [], t0: G.t, last: performance.now(), lx: e.clientX, ly: e.clientY, dist: 0, power: state.power, h: nextHue(), hapD: 0, primary: ptrs.size === 0 }; // seul le premier doigt posé rapporte de la Lumière
   ptrs.set(e.pointerId, p); ui.drawing(true);
   // Le premier doigt qui dessine mène la mélodie.
@@ -193,11 +222,11 @@ canvas.addEventListener('pointerdown', (e) => {
 
 canvas.addEventListener('pointermove', (e) => {
   const p = ptrs.get(e.pointerId); if (!p) return; e.preventDefault();
-  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  const co = e.getCoalescedEvents ? e.getCoalescedEvents() : null; const evs = co && co.length ? co : [e]; // secours si le navigateur ne détaille pas le mouvement
   for (const ev of evs) {
     const x = ev.clientX, y = ev.clientY; const d = dist(p.lx, p.ly, x, y); if (d < 2.5) continue; const dyMove = y - p.ly;
     const now = performance.now(); const dt = Math.max(1, now - p.last); const speed = d / dt; // px/ms
-    p.last = now; p.lx = x; p.ly = y; p.x = x; p.y = y; p.dist += d; p.raw.push({ x, y });
+    p.last = now; p.lx = x; p.ly = y; p.x = x; p.y = y; p.dist += d; p.raw.push({ x, y }); if (p.raw.length > 1400) p.raw = p.raw.filter((_, j) => j % 2 === 0);
     addVis(p, x, y, speed);
     if (p.power === 'filaments' || p.power === 'kaleido') {
       // Particules qui naissent du geste.
@@ -301,7 +330,7 @@ function tick(now) {
     const slow = workAvg > 12.5 || (fps < 24 && workAvg > 7);
     if (HQ) {} else if (slow && G.quality > 0.35) { G.quality *= 0.88; perfGood = 0; refresh(); }
     else if (workAvg < 8) { if (++perfGood > 2 && G.quality < 1) { G.quality = Math.min(1, G.quality * 1.1); perfGood = 0; refresh(); } }
-    G.P.budget = Math.round(G.P.cap * clamp(G.quality, 0.25, 1));
+    G.P.budget = Math.round(G.P.cap * clamp(G.quality, 0.25, 1) * (0.6 + 0.4 * (G.lod ?? 1)));
     const wantDpr = Math.min(devicePixelRatio || 1, G.quality < 0.45 ? 1.5 : 2); if (Math.abs(wantDpr - G.dpr) > 0.01 && (G.quality < 0.45 || G.quality > 0.8)) resize();
   }
 
@@ -326,10 +355,13 @@ function tick(now) {
   sand.active = state.power === 'magnet' && G.mode !== 'breathe'; sand.update(dt, [...ptrs.values()].filter((p) => p.power === 'magnet'));
   for (const list of [G.creations, G.effects, G.filaments]) { for (const o of list) o.update(dt); }
   G.creations = G.creations.filter((o) => !o.dead);
+  { const load = G.creations.length + G.effects.length * 2 + G.filaments.length * 0.5 + G.P.n / 600; G.lod = clamp(1.25 - load * 0.05, 0.4, 1); G.pm = G.pmBase * G.lod; }
+  if (G.filaments.length > 14) { const old = G.filaments.find((f) => f.life > G.t - f.born + 0.6); if (old) old.life = G.t - old.born + 0.6; }
   // Exposition automatique : beaucoup de lumière superposée ne doit jamais éblouir.
   const live = G.creations.length + G.effects.length * 2; G.exposure += (clamp(1.6 / Math.sqrt(Math.max(1, live / 3)), 0.45, 1) * (sleep ? 0.45 : 1) - G.exposure) * Math.min(1, dt * 2);
   if (G.creations.length > 12) { const old = G.creations.find((c) => !c.reacted && c.life > c.age + 1); if (old) old.life = old.age + 1; } G.effects = G.effects.filter((o) => !o.dead); G.filaments = G.filaments.filter((o) => !o.dead);
   ripples.update(dt);
+  checkQuests(dt);
   if (breath) breath.update(dt);
   if (sleep) sleep.update(dt);
   if (G.mode === 'contemplate' || (sleep && !sleep.ended)) { autoT -= dt; if (autoT < 0) { autoT = sleep ? rand(12, 18) : rand(3.5, 6.5); autoCreate(); } }
@@ -367,7 +399,7 @@ function drawLive() {
     if (p.power !== 'filaments' && p.power !== 'kaleido') { glow(ctx, p.x, p.y, 30, p.h, 0.5); continue; }
     const tail = 1.5 + 0.35 * (G.trailMult - 1) * 4; const v = p.vis;
     for (const q of v) q.f = smooth(0, 0.6, 1 - (G.t - q.t) / tail);
-    while (v.length > 2 && G.t - v[0].t > tail && v.length > 400) v.shift();
+    let cut = 0; while (cut < v.length - 2 && G.t - v[cut].t > tail) cut++; if (cut) v.splice(0, cut);
     const copies = p.power === 'kaleido' ? symCount() : 1; const c = kCenter();
     for (let k = 0; k < copies; k++) {
       if (k) { const half = k % 2 === 1; const ang = Math.floor(k / 2) * (TAU / (copies / 2)); ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0); ctx.translate(c.x, c.y); ctx.rotate(half ? -ang : ang); if (half) ctx.scale(1, -1); ctx.translate(-c.x, -c.y); }
