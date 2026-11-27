@@ -36,7 +36,7 @@ export class Ripples {
   add(x, y, strong = 1) {
     const G = this.G; if (this.list.length > 26) this.list.shift();
     this.list.push({ x, y, t: G.t, h: hue(Math.random()), s: strong });
-    audio.note(Math.round((1 - y / G.H) * 10) + 3, { kind: 'drop', vel: 0.45 * strong, pan: (x / G.W) * 2 - 1 });
+    audio.noteOnGrid(Math.round((1 - y / G.H) * 10) + 3, { kind: 'drop', vel: 0.5 * strong, pan: (x / G.W) * 2 - 1 });
     G.earn(1.4 * strong, x, y, 'water', true);
   }
   update(dt) {

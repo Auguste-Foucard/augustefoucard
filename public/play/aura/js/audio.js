@@ -13,6 +13,8 @@ const CHORDS = [ // accords de la nappe (MIDI) : D, Bm7, Gmaj9, A6sus
 ];
 // Niveau général volontairement doux : le jeu se joue souvent au casque ou au calme.
 const MASTER = 0.55; const PAD = 0.2;
+// Tempo commun à tout ce qui se joue en dessinant : la musique reste posée, même quand le geste est rapide.
+const BPM = 80; const STEP = 60 / BPM / 2; // une croche ≈ 0,375 s
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 export const degreeToMidi = (d) => { const o = Math.floor(d / 5); const i = ((d % 5) + 5) % 5; return ROOT + o * 12 + PENTA[i]; };
 
@@ -41,6 +43,7 @@ class Audio {
 
   build() {
     const c = this.ctx;
+    this.gridT0 = c.currentTime;
     this.master = c.createGain(); this.master.gain.value = this.vol * this.vol * MASTER;
     const comp = c.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 18; comp.ratio.value = 6; comp.attack.value = 0.01; comp.release.value = 0.4;
     this.master.connect(comp); comp.connect(c.destination);
@@ -123,11 +126,11 @@ class Audio {
 
   // ---------- Notes ----------
   /** Joue une note pentatonique. kind : kalimba | harp | crystal | piano | bell | drop | glass */
-  note(degree, { kind = 'kalimba', vel = 0.6, pan = 0, delay = 0, dur = 1 } = {}) {
+  note(degree, { kind = 'kalimba', vel = 0.6, pan = 0, delay = 0, dur = 1, at = 0, harm = true } = {}) {
     if (!this.ok || this.vol <= 0 || !this.ctx || this.ctx.state !== 'running') return;
     if (this.voices > 18) return;
     if (this.sleepMode) { degree -= 5; vel *= 0.55; if (kind === 'crystal' || kind === 'glass' || kind === 'bell') kind = 'harp'; dur *= 1.4; }
-    const c = this.ctx; const t = c.currentTime + 0.005 + delay;
+    const c = this.ctx; const t = at ? Math.max(at, c.currentTime + 0.005) + delay : c.currentTime + 0.005 + delay;
     const f = mtof(degreeToMidi(degree));
     const out = c.createGain(); out.gain.value = 0;
     const p = c.createStereoPanner ? c.createStereoPanner() : null;
@@ -136,6 +139,7 @@ class Audio {
     const v = vel * (this.night ? 0.6 : 1);
     const parts = { // [ratio, gain, type, decayFactor]
       kalimba: [[1, 1, 'sine', 1], [5.4, 0.16, 'sine', 0.08], [2, 0.12, 'sine', 0.5]],
+      keys: [[1, 1, 'sine', 1], [2, 0.3, 'sine', 0.55], [3, 0.09, 'sine', 0.35], [4, 0.035, 'sine', 0.22], [0.5, 0.12, 'sine', 1.2]], // boîte à musique feutrée
       harp: [[1, 0.8, 'triangle', 1], [2, 0.25, 'sine', 0.6], [3, 0.08, 'sine', 0.4]],
       crystal: [[2, 0.7, 'sine', 1], [5.52, 0.18, 'sine', 0.5], [8.9, 0.06, 'sine', 0.3]],
       glass: [[4, 0.4, 'sine', 1], [10.8, 0.1, 'sine', 0.4]],
@@ -143,8 +147,8 @@ class Audio {
       bell: [[1, 0.8, 'sine', 1], [2.76, 0.32, 'sine', 0.7], [5.4, 0.14, 'sine', 0.5], [0.5, 0.25, 'sine', 1.1]],
       drop: [[1, 1, 'sine', 1]],
     }[kind] || [[1, 1, 'sine', 1]];
-    const decay = { kalimba: 1.4, harp: 2.2, crystal: 2.6, glass: 1.8, piano: 2.4, bell: 4.5, drop: 0.5 }[kind] * dur;
-    const atk = kind === 'harp' ? 0.004 : kind === 'bell' ? 0.003 : 0.002;
+    const decay = { kalimba: 1.4, keys: 2.1, harp: 2.2, crystal: 2.6, glass: 1.8, piano: 2.4, bell: 4.5, drop: 0.5 }[kind] * dur;
+    const atk = kind === 'keys' ? 0.007 : kind === 'harp' ? 0.004 : kind === 'bell' ? 0.003 : 0.002;
     out.gain.linearRampToValueAtTime(v * 0.16, t + atk);
     out.gain.setTargetAtTime(0, t + atk, decay / 4);
     const oscs = [];
@@ -157,23 +161,71 @@ class Audio {
     this.voices++;
     oscs[0].onended = () => { this.voices--; out.disconnect(); };
     // Avec la Résonance, une harmonie douce (tierce/quinte pentatonique) accompagne certaines notes.
-    if (this.richness >= 3 && kind !== 'drop' && Math.random() < 0.15 + this.richness * 0.05 && delay === 0) {
+    if (harm && this.richness >= 3 && kind !== 'drop' && Math.random() < 0.15 + this.richness * 0.05 && delay === 0) {
       this.note(degree + (Math.random() < 0.5 ? 2 : 5), { kind: kind === 'kalimba' ? 'harp' : kind, vel: vel * 0.35, pan: -pan, delay: 0.09 });
     }
   }
 
-  /** Note jouée pendant le tracé : hauteur selon la position, timbre selon la vitesse. */
-  gesture(yNorm, speed, pan, power = 'filaments') {
-    if (!this.ctx) return;
-    const now = performance.now(); const gap = this.sleepMode ? 320 : speed > 1.4 ? 95 : speed > 0.6 ? 140 : 200;
-    if (now - this.lastNote < gap) return;
-    this.lastNote = now;
-    let d = Math.round((1 - yNorm) * 12) + 2; // 3 octaves sur la hauteur de l'écran
-    // Attirance douce vers les notes de l'accord en cours.
-    if (this.currentChord && Math.random() < 0.35) d += Math.random() < 0.5 ? 0 : 5 * (Math.random() < 0.5 ? 1 : -1);
-    const kind = power === 'water' ? 'drop' : power === 'kaleido' ? 'harp' : speed > 1.6 ? 'crystal' : speed > 0.7 ? 'kalimba' : 'harp';
-    this.note(d, { kind, vel: clamp(0.28 + speed * 0.18, 0.25, 0.6), pan });
+  // ---------- Son du dessin : une mélodie qui suit le doigt ----------
+  /** Prochain temps de la grille rythmique (div = 2 pour les doubles croches). */
+  nextTick(div = 1, ahead = 0.03) { const step = STEP / div; const now = this.ctx.currentTime + ahead; const n = Math.ceil((now - this.gridT0) / step); return { t: this.gridT0 + n * step, n }; }
+  chordPcs() { return new Set((this.currentChord || CHORDS[0]).map((m) => ((m % 12) + 12) % 12)); }
+  /** Rapproche une note de l'accord en cours (temps forts, fins de phrase). */
+  snap(deg) { const pcs = this.chordPcs(); for (const o of [0, -1, 1, -2, 2]) if (pcs.has(degreeToMidi(deg + o) % 12)) return deg + o; return deg; }
+  heightDeg(yNorm) { return clamp(Math.round((1 - yNorm) * 10) + 3, 2, 13); }
+  padBase() { return this.musicVol * this.musicVol * PAD * (this.night ? 0.7 : 1); }
+
+  /** Début d'un geste : la mélodie part de la hauteur du doigt, les nappes s'effacent un peu. */
+  strokeStart(yNorm, power) {
+    if (!this.ok || !this.ctx) return; const t = this.ctx.currentTime;
+    this.stroke = { deg: this.snap(this.heightDeg(yNorm)), lastN: -1, dy: 0, power, count: 0, yNorm };
+    this.padBus.gain.setTargetAtTime(this.padBase() * 0.55, t, 0.3);
+    if (power === 'filaments' || power === 'kaleido') this.voiceStart(this.stroke.deg);
   }
+  /** Pendant le geste : une note par croche au plus, par petits pas qui suivent la hauteur du doigt. */
+  gesture(yNorm, speed, pan, power = 'filaments', dy = 0) {
+    const s = this.stroke; if (!s || !this.ok || !this.ctx) return;
+    s.dy += dy; s.yNorm = yNorm; this.voiceSpeed(speed);
+    const { t, n } = this.nextTick(); if (n <= s.lastN) return;
+    if (speed < 0.05) return; // doigt presque immobile : on laisse sonner
+    if (speed < 0.2 && n % 2) return; // geste lent : seulement sur les temps
+    const target = this.heightDeg(yNorm); let step = clamp(target - s.deg, -2, 2);
+    if (step === 0 && s.count % 3 === 2) step = Math.abs(s.dy) > 20 ? -Math.sign(s.dy) : (n % 4 < 2 ? 1 : -1); // petite broderie
+    let deg = clamp(s.deg + step, 1, 14);
+    if (n % 2 === 0) deg = this.snap(deg); // temps fort : note de l'accord
+    s.deg = deg; s.lastN = n; s.dy = 0; s.count++;
+    const accent = n % 4 === 0 ? 1 : n % 2 === 0 ? 0.88 : 0.74;
+    this.note(deg, { kind: power === 'kaleido' ? 'harp' : 'keys', vel: clamp(0.56 + speed * 0.1, 0.56, 0.74) * accent, pan: pan * 0.6, at: t, harm: false });
+    this.voiceTo(deg, t);
+  }
+  /** Fin du geste : la phrase se pose sur une note de repos, au temps suivant. */
+  strokeEnd() {
+    const s = this.stroke; this.stroke = null; if (!this.ctx) return; const t = this.ctx.currentTime;
+    this.padBus.gain.setTargetAtTime(this.padBase(), t + 0.4, 0.8); this.voiceStop();
+    if (!s || !this.ok) return;
+    let { t: at, n } = this.nextTick(); if (n <= s.lastN) { at += (s.lastN + 1 - n) * STEP; n = s.lastN + 1; } if (n % 2) at += STEP; // toujours après la dernière note, sur un temps
+    const root = (this.currentChord || CHORDS[0])[0] % 12; let d = s.count ? s.deg : this.heightDeg(s.yNorm);
+    for (const o of [0, -1, 1, -2, 2, -3, 3]) if (degreeToMidi(d + o) % 12 === root) { d += o; break; }
+    this.note(d, { kind: s.power === 'kaleido' ? 'harp' : 'keys', vel: s.count ? 0.62 : 0.55, at, dur: 1.5, harm: false });
+    if (s.count > 2) this.note(d - 5, { kind: 'harp', vel: 0.26, at: at + 0.02, dur: 1.3, harm: false }); // octave grave : repos
+  }
+
+  // Voix continue sous le doigt : un verre qui chante et glisse d'une note à l'autre.
+  voiceStart(deg) {
+    this.voiceStop(); const c = this.ctx; const t = c.currentTime; const f = mtof(degreeToMidi(deg - (this.sleepMode ? 5 : 0)) - 12);
+    const g = c.createGain(); g.gain.value = 0; const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1100; lp.Q.value = 0.4;
+    const o1 = c.createOscillator(); o1.type = 'triangle'; o1.frequency.value = f;
+    const o2 = c.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2; o2.detune.value = 5; const g2 = c.createGain(); g2.gain.value = 0.3;
+    const lfo = c.createOscillator(); lfo.frequency.value = 4.4; const lg = c.createGain(); lg.gain.value = 4; lfo.connect(lg); lg.connect(o1.detune); lg.connect(o2.detune);
+    o1.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(this.dry); g.connect(this.verbIn);
+    o1.start(t); o2.start(t); lfo.start(t); this.voice = { o1, o2, lfo, g, lp };
+  }
+  voiceSpeed(speed) { const v = this.voice; if (!v) return; const t = this.ctx.currentTime; v.g.gain.setTargetAtTime(clamp(0.012 + speed * 0.035, 0.012, 0.05) * (this.sleepMode ? 0.6 : 1), t, 0.15); v.lp.frequency.setTargetAtTime(800 + Math.min(speed, 1.5) * 700, t, 0.25); }
+  voiceTo(deg, at) { const v = this.voice; if (!v) return; const f = mtof(degreeToMidi(deg - (this.sleepMode ? 5 : 0)) - 12); v.o1.frequency.setTargetAtTime(f, at, 0.07); v.o2.frequency.setTargetAtTime(f * 2, at, 0.07); }
+  voiceStop() { const v = this.voice; if (!v) return; this.voice = null; const t = this.ctx.currentTime; v.g.gain.cancelScheduledValues(t); v.g.gain.setValueAtTime(v.g.gain.value, t); v.g.gain.setTargetAtTime(0, t, 0.3); for (const o of [v.o1, v.o2, v.lfo]) o.stop(t + 2); }
+
+  /** Note calée sur la grille (gouttes d'eau, etc.). */
+  noteOnGrid(degree, opts = {}, div = 2) { if (!this.ctx) return; this.note(degree, { ...opts, at: this.nextTick(div).t }); }
 
   /** Signature sonore d'une forme qui prend vie. */
   form(id, pan = 0) {
@@ -191,7 +243,8 @@ class Audio {
       galaxy: [[0, 0], [5, 0.2], [10, 0.4], [15, 0.6], [20, 0.8]],
     }[id] || [[7, 0]];
     const kind = { line: 'kalimba', circle: 'crystal', wave: 'harp', spiral: 'glass', triangle: 'crystal', star: 'bell', flower: 'harp', heart: 'piano', infinity: 'kalimba', mandala: 'harp', galaxy: 'bell' }[id] || 'kalimba';
-    for (const [d, dl] of seqs) this.note(d, { kind, vel: 0.42, pan: pan * 0.6, delay: dl });
+    const at = this.ctx ? this.nextTick(2).t : 0;
+    for (const [d, dl] of seqs) this.note(d, { kind, vel: 0.42, pan: pan * 0.6, delay: dl, at });
     if (id === 'heart') this.thump();
   }
 
