@@ -15,7 +15,7 @@ import { UI } from './ui.js';
 import { playIntro } from './intro.js';
 import { Breath, Sleep } from './serenity.js';
 import { SKY, SkyPuzzle, nextSky, skyCost, skySpot, edgesOf } from './sky.js';
-import { OBJECTIVES, currentObjective, advanceObjective } from './objectives.js';
+import { OBJECTIVES, currentObjective, advanceObjective, objPower } from './objectives.js';
 
 const SAVE_KEY = 'aura.save.v1';
 const canvas = document.getElementById('c');
@@ -198,26 +198,45 @@ function objectiveInfo() {
   const cur = currentObjective(state); if (!cur) return null;
   const need = objLevel(cur.o); const info = { ...cur, need, locked: state.level < need };
   if (cur.o.kind === 'sky') { const c = SKY.find((x) => x.id === cur.o.id); info.cost = skyCost(c); info.ready = !info.locked && nextSky(state)?.id === c.id && state.light >= info.cost; }
+  const pw = objPower(cur.o); if (pw && !info.locked && pw !== state.power && state.level >= POWER[pw].level) info.switchTo = L(POWER[pw].name);
   return info;
 }
 if (!state.obj) { state.obj = { i: 0, base: 0 }; let guard = 0; while (currentObjective(state)?.done && guard++ < 60) { const i = state.obj.i + 1; state.obj = { i, base: 0 }; } } // déjà accomplis : validés en silence
-let objT = 0.5;
+let objT = 0.5, objGuided = -1;
 function checkObjective(dt) {
   objT -= dt; if (objT > 0) return; objT = 0.5;
-  const info = objectiveInfo(); ui.objective(info, G.mode === 'play');
+  let info = objectiveInfo();
+  if (info && !info.done && !info.locked && G.mode === 'play' && objGuided !== info.i) { objGuided = info.i; guideObjective(info); info = objectiveInfo(); }
+  ui.objective(info, G.mode === 'play');
   if (!info || !info.done || G.mode !== 'play') return;
   const r = Math.round(20 * Math.pow(info.i + 1, 1.3)) * gainMult(state); earn(r, 60, 60, 'objective');
   audio.note(9, { kind: 'bell', vel: 0.32 }); audio.note(14, { kind: 'crystal', vel: 0.25, delay: 0.12 }); haptic('soft');
   ui.objectiveDone(); advanceObjective(state); dirty = true;
   if (!currentObjective(state)) ui.toast(t('objAll'), t('objAll2'), 5000, 4);
 }
-/** Toucher l'objectif : lancer la constellation, ouvrir le bon onglet, ou rappeler la consigne. */
+/** Consigne concrète de l'objectif : ce qu'il faut faire, avec quel geste. */
+function objHint(o) {
+  if (o.hint) return L(o.hint);
+  if (o.kind === 'power') return L(POWER[o.id].desc);
+  if (o.kind === 'level') return t('objLevelHint');
+  if (o.kind === 'sky') return t('objSkyHint');
+  if (o.kind === 'form' && o.type === 'mandala') return t('objMandala');
+  return t('objGo');
+}
+/** Nouvel objectif : on met le bon pouvoir en main et on dit quoi faire. */
+function guideObjective(info) {
+  const pw = objPower(info.o);
+  if (pw && pw !== state.power && state.level >= POWER[pw].level) { state.power = pw; dirty = true; ui.render(); ui.flashPower(); }
+  ui.toast(L(info.o.name), objHint(info.o), 4200, 3);
+}
+/** Toucher l'objectif : remettre le bon pouvoir, lancer la constellation, ouvrir le bon onglet, ou rappeler la consigne. */
 function objectiveTap() {
   const info = objectiveInfo(); if (!info) return;
   if (info.o.kind === 'sky' && info.ready) { awakenSky(); return; }
   if (info.locked) { ui.toast(L(info.o.name), t('objLevel', { n: info.need }), 2600, 3); return; }
-  if (info.o.tab) { ui.openSheet(info.o.tab); return; }
-  ui.toast(L(info.o.name), t('objGo'), 2600, 3);
+  if (info.switchTo) { setPower(objPower(info.o)); ui.toast(L(info.o.name), objHint(info.o), 3200, 3); return; }
+  if (info.o.tab && info.o.kind !== 'power') { ui.openSheet(info.o.tab); return; }
+  ui.toast(L(info.o.name), objHint(info.o), 3200, 3);
 }
 
 // ---------- Le Chemin ----------

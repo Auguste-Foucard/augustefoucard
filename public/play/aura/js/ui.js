@@ -99,6 +99,7 @@ export class UI {
     else if (info.o.kind === 'sky') { sub = info.ready ? t('objTap') : `${this.fmt(this.s.light)} / ${this.fmt(info.cost)} ${t('light').toLowerCase()}`; k = info.ready ? 1 : Math.min(1, this.s.light / info.cost); }
     else if (info.o.kind === 'level') { sub = `${t('level')} ${this.s.level} / ${info.o.n}`; k = Math.min(1, this.s.level / info.o.n); }
     else { sub = `${info.v} / ${info.o.n}`; k = info.v / info.o.n; }
+    if (info.switchTo) sub = t('objSwitch', { p: info.switchTo });
     const key = name + sub; if (key !== this._objKey) { this._objKey = key; this.$('objT').textContent = name; this.$('objS').textContent = sub; }
     this.$('objB').style.width = Math.round(k * 100) + '%'; el.classList.toggle('ready', !!info.ready);
   }
