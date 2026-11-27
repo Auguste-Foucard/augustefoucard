@@ -35,6 +35,7 @@ if (!localStorage.getItem(SAVE_KEY) && matchMedia('(prefers-reduced-motion: redu
 let dirty = false;
 function save() { if (DEMO) return; state.lastSeen = Date.now(); try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); dirty = false; } catch { /* stockage indisponible : le jeu continue */ } }
 if (state.settings.lang) setLang(state.settings.lang); else setLang(lang);
+state.settings.night = false; // l'ancien interrupteur est fondu dans le « Mode avant de dormir » (séance)
 
 // ---------- Contexte partagé ----------
 const G = {
@@ -383,6 +384,13 @@ addEventListener('pagehide', save);
 refresh(); ui.render();
 document.body.dataset.mode = 'play';
 
+/** Le soir, un rappel discret (une fois par soirée) que le Mode avant de dormir existe. */
+function eveningHint() {
+  const d = new Date(); const h = d.getHours(); if (h < 21 && h >= 4) return;
+  const day = new Date(d.getTime() - 4 * 3600e3).toDateString(); if (state.seen.sleepHint === day) return;
+  state.seen.sleepHint = day; dirty = true; setTimeout(() => ui.toast(t('sleepHint'), t('sleepHint2'), 4200, 1), 1200);
+}
+
 // ---------- Entrée dans la bulle ----------
 const QS = new URLSearchParams(location.search);
 let quickIntro = false; try { quickIntro = sessionStorage.getItem('aura.quick') === '1'; sessionStorage.removeItem('aura.quick'); } catch { /* indisponible */ }
@@ -391,7 +399,7 @@ if (DEMO || QS.has('nointro')) { document.body.classList.remove('entering'); doc
 else skipIntro = playIntro({
   still: QS.has('splash'), quick: quickIntro, reduced: state.settings.reduced,
   onEnter: () => { if (G.audioOn) audio.enter(); },
-  onDone: () => { skipIntro = null; if (!state.seen.intro) setTimeout(() => ui.showIntro(), 300); },
+  onDone: () => { skipIntro = null; if (!state.seen.intro) setTimeout(() => ui.showIntro(), 300); else eveningHint(); },
 });
 requestAnimationFrame((n) => { last = n; frame(n); });
 
