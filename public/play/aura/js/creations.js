@@ -60,8 +60,7 @@ export class Creation {
   }
 
   draw(ctx) {
-    const G = this.G; const e = this.env(); if (e <= 0.005) return;
-    const copies = this.sym || 1;
+    const G = this.G; const copies = this.sym || 1; const e = this.env() * symAlpha(copies); if (e <= 0.005) return;
     for (let k = 0; k < copies; k++) {
       if (k) { const c = this.kc; const half = k % 2 === 1; const ang = Math.floor(k / 2) * (TAU / (this.sym / 2)) + (this.type === 'mandala' ? G.t * 0.15 : 0);
         ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0); ctx.translate(c.x, c.y); ctx.rotate(half ? -ang : ang); if (half) ctx.scale(1, -1); ctx.translate(-c.x, -c.y); }
@@ -73,7 +72,9 @@ export class Creation {
 }
 
 // ---------- Comportements par forme ----------
-const outline = (c, ctx, G, e, w = 2.6, glowK = 1) => ribbon(ctx, c.pts, { width: w, alpha: e, t: G.t, strands: G.strands, glowK });
+const outline = (c, ctx, G, e, w = 2.6, glowK = 1) => ribbon(ctx, c.pts, { width: w, alpha: e, t: G.t, strands: c.sym ? 1 : G.strands, glowK: c.sym ? glowK * 0.5 : glowK });
+/** En Kaléidoscope, chaque copie éclaire moins : l'ensemble garde la luminosité d'une seule forme. */
+export const symAlpha = (n) => (n > 1 ? Math.min(1, 1.5 / Math.sqrt(n)) : 1);
 const spawnAlong = (c, G, o) => { const p = c.pts[(Math.random() * c.pts.length) | 0]; const k = c.sym ? (Math.random() * c.sym) | 0 : 0; const [x, y] = c.tx(p.x, p.y, k); G.P.add(x, y, o.vx ?? rand(-30, 30), o.vy ?? rand(-30, 30), { h: p.h + rand(-15, 15), ...o }); };
 
 const BEHAVIOR = {
@@ -297,7 +298,7 @@ export class Filament {
     const copies = this.sym || 1;
     for (let c = 0; c < copies; c++) {
       if (c) { const half = c % 2 === 1; const ang = Math.floor(c / 2) * (TAU / (this.sym / 2)); ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0); ctx.translate(this.kc.x, this.kc.y); ctx.rotate(half ? -ang : ang); if (half) ctx.scale(1, -1); ctx.translate(-this.kc.x, -this.kc.y); }
-      ribbon(ctx, this.pts, { width: 2.2, alpha: 0.9, t: G.t, strands: G.strands });
+      ribbon(ctx, this.pts, { width: 2.2, alpha: 0.9 * symAlpha(copies) * (0.45 + 0.55 * G.exposure), t: G.t, strands: copies > 1 ? 1 : G.strands, glowK: copies > 1 ? 0.5 : 1 });
     }
     if (copies > 1) ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0);
   }
