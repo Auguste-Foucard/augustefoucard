@@ -5,10 +5,10 @@ import { audio } from './audio.js';
 
 // ---------- Respiration ----------
 export const PATTERNS = {
-  calm: { phases: [['inhale', 4], ['hold', 2], ['exhale', 6]], cycles: 15, name: { fr: 'Apaiser · 4-2-6', en: 'Soothe · 4-2-6' } },
-  coherence: { phases: [['inhale', 5], ['exhale', 5]], cycles: 18, name: { fr: 'Cohérence · 5-5', en: 'Coherence · 5-5' } },
-  box: { phases: [['inhale', 4], ['hold', 4], ['exhale', 4], ['rest', 4]], cycles: 11, name: { fr: 'Carré · 4-4-4-4', en: 'Box · 4-4-4-4' } },
-  sleep: { phases: [['inhale', 4], ['hold', 7], ['exhale', 8]], cycles: 6, name: { fr: 'Sommeil · 4-7-8', en: 'Sleep · 4-7-8' } },
+  calm: { phases: [['inhale', 4], ['hold', 2], ['exhale', 6]], cycles: 6, name: { fr: 'Apaiser · 4-2-6', en: 'Soothe · 4-2-6' } },
+  coherence: { phases: [['inhale', 5], ['exhale', 5]], cycles: 7, name: { fr: 'Cohérence · 5-5', en: 'Coherence · 5-5' } },
+  box: { phases: [['inhale', 4], ['hold', 4], ['exhale', 4], ['rest', 4]], cycles: 5, name: { fr: 'Carré · 4-4-4-4', en: 'Box · 4-4-4-4' } },
+  sleep: { phases: [['inhale', 4], ['hold', 7], ['exhale', 8]], cycles: 4, name: { fr: 'Sommeil · 4-7-8', en: 'Sleep · 4-7-8' } },
 };
 // Une note de plus à chaque respiration : la mélodie monte doucement puis redescend.
 const MELODY = [0, 2, 4, 5, 7, 9, 7, 5, 4, 7, 9, 12, 9, 7, 4, 2, 4, 7];
