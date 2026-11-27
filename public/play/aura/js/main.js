@@ -58,7 +58,7 @@ function refresh() {
   const sleeping = G.mode === 'sleep';
   G.intensity = set.intensity * (set.night ? 0.72 : 1) * (sleeping ? 0.5 : 1);
   G.pm = (1 + 0.3 * u.particles) * (0.45 + 0.55 * set.intensity) * G.quality * (set.reduced ? 0.55 : 1) * (set.night ? 0.75 : 1) * (sleeping ? 0.5 : 1);
-  G.lifeMult = 1 + 0.25 * u.life; G.trailMult = 1 + 0.25 * u.trails; G.burstMult = 1 + 0.12 * u.bursts; G.bloom = u.bloom; G.bursts = u.bursts; G.colors = u.colors;
+  G.lifeMult = 1 + 0.25 * u.life; G.trailMult = 1 + 0.25 * u.trails; G.burstMult = 1 + 0.12 * u.bursts; G.bloom = u.bloom; G.bursts = u.bursts; G.colors = u.colors; G.trails = u.trails;
   G.strands = Math.min(4, 1 + Math.floor(u.trails / 3) + (u.particles >= 6 ? 1 : 0));
   G.reactWindow = 8 + 1.2 * u.links; G.reactDist = Math.min(G.W, G.H) * (0.28 + 0.04 * u.links);
   G.P.trail = G.trailMult; G.P.timeScale = (set.reduced ? 0.7 : 1) * (set.night ? 0.8 : 1) * (sleeping ? 0.55 : 1);
@@ -186,7 +186,7 @@ canvas.addEventListener('pointerdown', (e) => {
   // Le premier doigt qui dessine mène la mélodie.
   if ((p.power === 'filaments' || p.power === 'kaleido') && melodyOwner === null) { melodyOwner = e.pointerId; audio.strokeStart(p.y / G.H, p.power); }
   if (p.power === 'fireworks') p.charge = new Charge(G, p.x, p.y, p.id);
-  if (p.power === 'water') ripples.add(p.x, p.y, 1);
+  if (p.power === 'water') ripples.press(p);
   if (p.power === 'magnet' && sand.holding === null) sand.press(p);
   addVis(p, p.x, p.y, 0);
 }, { passive: false });
@@ -205,7 +205,7 @@ canvas.addEventListener('pointermove', (e) => {
       if (melodyOwner === p.id) audio.gesture(y / G.H, speed, (x / G.W) * 2 - 1, p.power, dyMove);
       earn(d * 0.0016 * gainMult(state), x, y, 'stroke', true);
     } else if (p.power === 'fireworks' && p.charge) p.charge.move(x, y);
-    else if (p.power === 'water') { p.wd = (p.wd || 0) + d; if (p.wd > 70) { p.wd = 0; ripples.add(x, y, 0.6); } }
+    else if (p.power === 'water') { ripples.follow(p); p.wd = (p.wd || 0) + d; if (p.wd > 70) { p.wd = 0; ripples.add(x, y, 0.5); } }
     p.hapD += d; if (p.hapD > 140) { p.hapD = 0; haptic('tick'); }
   }
 }, { passive: false });
@@ -224,7 +224,7 @@ function endPointer(e) {
   if (melodyOwner === e.pointerId) { melodyOwner = null; audio.strokeEnd(); } // la phrase se pose (ou une seule note pour une touche)
   if (p.power === 'fireworks') { p.charge.release(); return; }
   if (p.power === 'magnet') { sand.release(p); return; }
-  if (p.power === 'water') return;
+  if (p.power === 'water') { ripples.release(p); return; }
   const dur = G.t - p.t0;
   if (p.dist < 14) { // simple touche : une pluie d'étincelles et une note
     burst(G.P, p.x, p.y, { n: Math.round(14 * G.pm), speed: 70, life: 1.4, s: 3.5, k: 0, h: p.h, spread: 0.6 });

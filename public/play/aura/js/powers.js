@@ -33,38 +33,68 @@ export class Charge {
 }
 
 // ---------- L'eau : ondulations qui se croisent ----------
+// Toucher : une goutte. Garder le doigt : la goutte grossit, puis tombe en grande onde. Glisser : un sillage.
 export class Ripples {
-  constructor(G) { this.G = G; this.list = []; this.sparkT = 0; }
-  add(x, y, strong = 1) {
-    const G = this.G; if (this.list.length > 26) this.list.shift();
-    this.list.push({ x, y, t: G.t, h: hue(Math.random()), s: strong });
-    audio.noteOnGrid(Math.round((1 - y / G.H) * 10) + 3, { kind: 'drop', vel: 0.5 * strong, pan: (x / G.W) * 2 - 1 });
-    G.earn(1.4 * strong, x, y, 'water', true);
+  constructor(G) { this.G = G; this.list = []; this.sparkT = 0; this.holding = null; this.chainT = 0; }
+  press(p) { this.holding = { id: p.id, t0: this.G.t, x: p.x, y: p.y, h: hueAt(Math.random()) }; this.add(p.x, p.y, 0.45); }
+  follow(p) { if (this.holding && this.holding.id === p.id) { this.holding.x = p.x; this.holding.y = p.y; } }
+  release(p) {
+    const H = this.holding; if (!H || H.id !== p.id) return; this.holding = null;
+    const k = clamp((this.G.t - H.t0 - 0.25) / 1.4, 0, 1); if (k > 0.05) { this.add(H.x, H.y, 0.6 + 1.6 * k, H.h); this.G.haptic(k > 0.6 ? 'strong' : 'soft'); }
+  }
+  add(x, y, strong = 1, h = null, secondary = false) {
+    const G = this.G; if (this.list.length > 18) this.list.shift();
+    const rings = Math.min(7, 3 + Math.floor(G.bloom / 2) + Math.round(strong));
+    this.list.push({ x, y, t: G.t, h: h ?? hueAt(Math.random()), s: strong, rings, sec: secondary,
+      speed: 105 * (0.9 + 0.08 * G.bursts) * (0.8 + 0.35 * Math.min(strong, 2)), life: 5 * (1 + (G.lifeMult - 1) * 0.4) * (0.75 + 0.3 * Math.min(strong, 2)) });
+    if (!secondary) {
+      const deg = Math.round((1 - y / G.H) * 9) + 3 - Math.round(strong * 1.5);
+      audio.noteOnGrid(deg, { kind: 'drop', vel: 0.38 + 0.18 * Math.min(strong, 2), pan: (x / G.W) * 2 - 1, harm: false });
+      if (strong > 1.1) audio.noteOnGrid(deg - 5, { kind: 'keys', vel: 0.3 + 0.12 * strong, pan: (x / G.W) * 2 - 1, harm: false });
+      G.earn((1 + strong * 1.6) * gainMult(G.state), x, y, 'water', strong < 1);
+    }
   }
   update(dt) {
-    const G = this.G; this.list = this.list.filter((r) => G.t - r.t < 5.5);
-    // Interférences : là où deux ondes se croisent, la lumière scintille.
+    const G = this.G; this.list = this.list.filter((r) => G.t - r.t < r.life);
+    // Goutte qui se charge sous le doigt.
+    const H = this.holding; if (H) { const k = clamp((G.t - H.t0 - 0.25) / 1.4, 0, 1); if (k > 0 && Math.random() < dt * 20 * G.pm) { const a = rand(TAU), r = 50 + 40 * k; G.P.add(H.x + Math.cos(a) * r, H.y + Math.sin(a) * r, -Math.cos(a) * r * 1.3, -Math.sin(a) * r * 1.3, { life: 0.7, s: 2.5, grav: 0, tur: 0, drag: 0.4, h: H.h + rand(-20, 20) }); } }
+    // Interférences : là où deux ondes se croisent, des gouttelettes de lumière s'élèvent.
     this.sparkT += dt; if (this.sparkT < 0.05) return; this.sparkT = 0;
-    const L = this.list; let gained = 0;
+    const L = this.list; let gained = 0, best = null;
     for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) {
-      const a = L[i], b = L[j]; const ra = (G.t - a.t) * 110, rb = (G.t - b.t) * 110; const d = dist(a.x, a.y, b.x, b.y);
+      const a = L[i], b = L[j]; const ra = (G.t - a.t) * a.speed, rb = (G.t - b.t) * b.speed; const d = dist(a.x, a.y, b.x, b.y);
       if (d < 1 || d > ra + rb || d < Math.abs(ra - rb)) continue;
       const k = (ra * ra - rb * rb + d * d) / (2 * d); const h2 = ra * ra - k * k; if (h2 < 0) continue; const hh = Math.sqrt(h2);
-      const mx = a.x + ((b.x - a.x) * k) / d, my = a.y + ((b.y - a.y) * k) / d; const fade = 1 - Math.max(G.t - a.t, G.t - b.t) / 5.5;
-      for (const sgn of [1, -1]) { const x = mx + (sgn * hh * (b.y - a.y)) / d, y = my - (sgn * hh * (b.x - a.x)) / d; if (Math.random() < 0.5 * G.pm) G.P.add(x, y, rand(-8, 8), rand(-8, 8), { life: 0.9, s: 4 + fade * 3, h: (a.h + b.h) / 2, grav: -6, tur: 0, a: fade }); gained += 0.03 * fade; }
+      const mx = a.x + ((b.x - a.x) * k) / d, my = a.y + ((b.y - a.y) * k) / d; const fade = 1 - Math.max((G.t - a.t) / a.life, (G.t - b.t) / b.life);
+      const hm = (a.h + b.h) / 2 + (Math.abs(a.h - b.h) > 180 ? 180 : 0);
+      for (const sgn of [1, -1]) {
+        const x = mx + (sgn * hh * (b.y - a.y)) / d, y = my - (sgn * hh * (b.x - a.x)) / d;
+        if (Math.random() < 0.55 * G.pm) G.P.add(x, y, rand(-10, 10), rand(-28, -8), { life: rand(1, 1.8) * (0.8 + 0.2 * G.trailMult), s: 3 + fade * 3.5, h: hm + rand(-15, 15), grav: -10, tur: 6, a: 0.4 + 0.6 * fade, k: G.trails > 3 ? 1 : 0 });
+        gained += 0.03 * fade; if (!best || fade > best.f) best = { x, y, f: fade, h: hm };
+      }
     }
-    if (gained > 0) { G.earn(gained, 0, 0, 'water', true); if (Math.random() < gained * 0.6) audio.note(12 + ((Math.random() * 6) | 0), { kind: 'glass', vel: 0.15 }); }
+    if (gained > 0) {
+      G.earn(gained * gainMult(G.state), 0, 0, 'water', true);
+      if (Math.random() < gained * 0.7) audio.noteOnGrid(audio.snap(11 + ((Math.random() * 5) | 0)), { kind: 'glass', vel: 0.16, harm: false });
+      // Floraison : un croisement fort fait naître une petite onde secondaire (sans réaction en chaîne infinie).
+      if (G.bloom >= 3 && best && best.f > 0.6 && G.t - this.chainT > 1.4) { this.chainT = G.t; this.add(best.x, best.y, 0.35, best.h, true); }
+    }
   }
   draw(ctx) {
-    const G = this.G; ctx.lineWidth = 1.4;
+    const G = this.G; const spreadDeg = 18 + G.colors * 14; const glowW = 5 + 3 * G.trailMult;
     for (const r of this.list) {
       const age = G.t - r.t;
-      for (let k = 0; k < 3 + G.bloom; k++) {
-        const a = age - k * 0.32; if (a <= 0) continue; const R = a * 110; const al = Math.pow(1 - a / 5.5, 2) * 0.55 * r.s * G.intensity; if (al <= 0.01) continue;
-        ctx.globalAlpha = al; ctx.strokeStyle = `hsl(${(r.h + k * 25 + a * 20) % 360 | 0},${sat()}%,${78 - k * 5}%)`; ctx.beginPath(); ctx.arc(r.x, r.y, R, 0, TAU); ctx.stroke();
+      for (let k = 0; k < r.rings; k++) {
+        const a = age - k * 0.3; if (a <= 0) continue; const R = a * r.speed; const al = Math.pow(1 - a / r.life, 1.6) * (0.5 + 0.25 * Math.min(r.s, 2)) * (r.sec ? 0.5 : 1) * G.intensity; if (al <= 0.01) continue;
+        const h = (r.h + k * spreadDeg + a * 12) % 360;
+        ctx.strokeStyle = `hsl(${h | 0},${sat()}%,${70 - k * 2}%)`;
+        ctx.globalAlpha = al * 0.18; ctx.lineWidth = glowW; ctx.beginPath(); ctx.arc(r.x, r.y, R, 0, TAU); ctx.stroke(); // halo
+        ctx.globalAlpha = al; ctx.lineWidth = 1.3 + Math.min(r.s, 2) * 0.5; ctx.stroke(); // trait net
       }
-      if (age < 0.6) glow(ctx, r.x, r.y, 26, r.h, (1 - age / 0.6) * 0.6);
+      if (age < 0.7) glow(ctx, r.x, r.y, 16 + 18 * Math.min(r.s, 2), r.h, (1 - age / 0.7) * 0.6);
     }
+    const H = this.holding;
+    if (H) { const k = clamp((G.t - H.t0 - 0.25) / 1.4, 0, 1); const pul = 1 + Math.sin(G.t * 9) * 0.05 * k; glow(ctx, H.x, H.y, (14 + 34 * k) * pul, H.h, 0.35 + 0.45 * k); glow(ctx, H.x, H.y, 6 + 6 * k, H.h + 30, 0.9); }
     ctx.globalAlpha = 1;
   }
 }
@@ -105,18 +135,21 @@ export class Sand {
   update(dt, pointers) {
     const G = this.G; this.fade += ((this.active ? 1 : 0) - this.fade) * Math.min(1, dt * 2); if (this.fade < 0.01) return;
     this.ensure();
-    const repel = pointers.length >= 2; const t = G.t; const decay = Math.exp(-dt * (1.1 / G.lifeMult)); const swirl = 0.45 + G.bloom * 0.05;
+    const repel = pointers.length >= 2; const t = G.t; const decay = Math.exp(-dt * (1.1 / G.lifeMult)); const swirl = 0; // pas de rotation : le sable vient droit vers le doigt
     const hold = pointers.find((p) => p.id === this.holding); let near = 0;
     for (let i = 0; i < this.n; i++) {
       const ang = noise2(this.x[i] * 0.004 + t * 0.05, this.y[i] * 0.004) * TAU * 2; let ax = Math.cos(ang) * 10, ay = Math.sin(ang) * 10;
       for (const p of pointers) {
         const dx = p.x - this.x[i], dy = p.y - this.y[i]; const d2 = dx * dx + dy * dy; const R = repel ? 170 : 280; if (d2 > R * R) continue;
-        const d = Math.sqrt(d2) + 10; const f = (repel ? -1500 : 1100) * (repel ? 1 - d / R : 0.35 + 0.65 * (1 - d / R));
+        const d = Math.sqrt(d2) + 10; const shell = 26 + Math.min(70, this.gathered * 0.06);
+        let f = (repel ? -1500 : 1100) * (repel ? 1 - d / R : 0.35 + 0.65 * (1 - d / R));
+        if (!repel && d < shell) f = -900 * (1 - d / shell); // une sphère de lumière, pas un point
         ax += (dx / d) * f + (repel ? 0 : (-dy / d) * f * swirl); ay += (dy / d) * f + (repel ? 0 : (dx / d) * f * swirl);
         this.b[i] = Math.min(1, this.b[i] + dt * 2.5);
         if (hold && p === hold && d < 130) near++;
       }
-      const dr = Math.exp(-2.1 * dt); this.vx[i] = (this.vx[i] + ax * dt) * dr; this.vy[i] = (this.vy[i] + ay * dt) * dr;
+      const nearF = hold && Math.hypot(hold.x - this.x[i], hold.y - this.y[i]) < 40 + this.gathered * 0.06 ? 5 : 2.1; // freine près du doigt : le sable s'y pose
+      const dr = Math.exp(-nearF * dt); this.vx[i] = (this.vx[i] + ax * dt) * dr; this.vy[i] = (this.vy[i] + ay * dt) * dr;
       this.x[i] += this.vx[i] * dt; this.y[i] += this.vy[i] * dt; this.b[i] *= decay;
       if (this.x[i] < -10) this.x[i] = G.W + 10; else if (this.x[i] > G.W + 10) this.x[i] = -10;
       if (this.y[i] < -10) this.y[i] = G.H + 10; else if (this.y[i] > G.H + 10) this.y[i] = -10;
