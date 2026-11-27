@@ -258,11 +258,17 @@ export class Filament {
 // ---------- Fantôme d'apprentissage ----------
 /** Trace doucement une forme à l'écran pour montrer comment la dessiner. */
 export class Ghost {
-  constructor(G, type) { this.G = G; this.born = G.t; this.life = 3.2; this.dead = false; const m = Math.min(G.W, G.H); this.pts = glyph(type, 0.5, 0.5, 0.3).map((p) => ({ x: G.W / 2 + (p.x - 0.5) * m, y: G.H * 0.46 + (p.y - 0.5) * m })); }
+  constructor(G, type) { this.G = G; this.born = G.t; this.life = 3.8; this.dead = false; const m = Math.min(G.W, G.H); this.pts = glyph(type, 0.5, 0.5, 0.3).map((p) => ({ x: G.W / 2 + (p.x - 0.5) * m, y: G.H * 0.57 + (p.y - 0.5) * m })); }
   update() { if (this.G.t - this.born > this.life) this.dead = true; }
   draw(ctx) {
-    const a = this.G.t - this.born; const n = this.pts.length; const head = Math.min(n - 1, Math.floor(easeInOut(a / 1.8) * (n - 1))); const fade = 1 - smooth(2.2, 3.2, a);
-    for (let i = 0; i <= head; i += 2) { const p = this.pts[i]; glow(ctx, p.x, p.y, 7, hue(i / n), 0.35 * fade); }
+    const a = this.G.t - this.born; const n = this.pts.length; const head = Math.min(n - 1, Math.floor(easeInOut(a / 2.4) * (n - 1))); const fade = 1 - smooth(2.9, 3.8, a);
+    // Le tracé à reproduire, bien lisible : un trait lumineux qui suit le doigt fantôme.
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const [w, al] of [[10, 0.12], [3, 0.6]]) {
+      ctx.lineWidth = w; ctx.globalAlpha = al * fade; ctx.strokeStyle = `hsl(${hue(0.5)},80%,82%)`;
+      ctx.beginPath(); ctx.moveTo(this.pts[0].x, this.pts[0].y); for (let i = 1; i <= head; i++) ctx.lineTo(this.pts[i].x, this.pts[i].y); ctx.stroke();
+    }
+    ctx.restore();
     const p = this.pts[head]; glow(ctx, p.x, p.y, 22, hue(0.5), 0.55 * fade);
   }
 }

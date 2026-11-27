@@ -221,6 +221,7 @@ function objHint(o) {
   if (o.kind === 'level') return t('objLevelHint');
   if (o.kind === 'sky') return t('objSkyHint');
   if (o.kind === 'form' && o.type === 'mandala') return t('objMandala');
+  if ((o.kind === 'form' && o.type === 'star') || o.kind === 'cosmic') return t('objStar');
   return t('objGo');
 }
 /** Nouvel objectif : on met le bon pouvoir en main et on dit quoi faire. */
@@ -228,6 +229,17 @@ function guideObjective(info) {
   const pw = objPower(info.o);
   if (pw && pw !== state.power && state.level >= POWER[pw].level) { state.power = pw; dirty = true; ui.render(); ui.flashPower(); }
   ui.toast(L(info.o.name), objHint(info.o), 4200, 3);
+  showDemo(info.o, 900); objMiss = 0;
+}
+/** La forme à montrer pour l'objectif (le geste à reproduire). */
+const demoType = (o) => (o.kind === 'form' && o.type !== 'line' && o.type !== 'mandala' ? o.type : o.kind === 'cosmic' ? 'star' : o.kind === 'combo' ? 'circle' : null);
+let objMiss = 0;
+function showDemo(o, delay = 0) { const d = demoType(o); if (d) setTimeout(() => { if (G.mode === 'play') G.effects.push(new Ghost(G, d)); }, delay); }
+/** Après deux essais ratés sur un objectif de forme, on remontre le geste. */
+function objectiveStroke(type) {
+  const cur = currentObjective(state); if (!cur || G.mode !== 'play') return; const d = demoType(cur.o); if (!d) return;
+  if (type === d || (cur.o.kind === 'cosmic' && type === 'circle')) { objMiss = 0; return; }
+  if (++objMiss >= 2) { objMiss = 0; showDemo(cur.o, 300); ui.toast(L(cur.o.name), objHint(cur.o), 3000, 3); }
 }
 /** Toucher l'objectif : remettre le bon pouvoir, lancer la constellation, ouvrir le bon onglet, ou rappeler la consigne. */
 function objectiveTap() {
@@ -236,7 +248,7 @@ function objectiveTap() {
   if (info.locked) { ui.toast(L(info.o.name), t('objLevel', { n: info.need }), 2600, 3); return; }
   if (info.switchTo) { setPower(objPower(info.o)); ui.toast(L(info.o.name), objHint(info.o), 3200, 3); return; }
   if (info.o.tab && info.o.kind !== 'power') { ui.openSheet(info.o.tab); return; }
-  ui.toast(L(info.o.name), objHint(info.o), 3200, 3);
+  ui.toast(L(info.o.name), objHint(info.o), 3200, 3); showDemo(info.o, 300);
 }
 
 // ---------- Le Chemin ----------
@@ -350,6 +362,7 @@ function endPointer(e) {
     if (!G._hinted?.[type]) { (G._hinted ||= {})[type] = 1; ui.toast(t('sleepingForm', { f: L(FORM[type].name), n: FORM[type].level }), '', 2600); }
     type = null;
   }
+  if (p.primary && !kal && p.dist > 120) objectiveStroke(type);
   if (!type) {
     G.filaments.push(new Filament(G, p.vis, { ...opts, lifeK: kal ? 1.2 : 1 }));
     const v = Math.max(1, (p.dist / Math.hypot(G.W, G.H)) * 6) * gainMult(state) * (kal ? 1.4 : 1);
