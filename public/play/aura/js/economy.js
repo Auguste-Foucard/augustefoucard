@@ -20,7 +20,7 @@ export const POWERS = [
   { id: 'filaments', level: 1, name: { fr: 'Filaments', en: 'Filaments' }, desc: { fr: 'Dessine des rubans lumineux. Les formes prennent vie.', en: 'Draw glowing ribbons. Shapes come alive.' } },
   { id: 'fireworks', level: 4, name: { fr: 'Feux d’artifice', en: 'Fireworks' }, desc: { fr: 'Garde le doigt posé pour accumuler, relâche pour libérer.', en: 'Hold to gather light, release to let it bloom.' } },
   { id: 'water', level: 7, name: { fr: 'L’eau', en: 'Water' }, desc: { fr: 'Des ondulations qui se croisent et scintillent.', en: 'Ripples that cross and shimmer.' } },
-  { id: 'magnet', level: 11, name: { fr: 'Magnétisme', en: 'Magnetism' }, desc: { fr: 'Attire le sable cosmique. Deux doigts le repoussent.', en: 'Pull the cosmic sand. Two fingers push it away.' } },
+  { id: 'magnet', level: 11, name: { fr: 'Magnétisme', en: 'Magnetism' }, desc: { fr: 'Garde le doigt posé pour rassembler le sable cosmique, relâche pour le faire éclater. Deux doigts le repoussent.', en: 'Hold to gather the cosmic sand, release to make it burst. Two fingers push it away.' } },
   { id: 'kaleido', level: 14, name: { fr: 'Kaléidoscope', en: 'Kaleidoscope' }, desc: { fr: 'Chaque geste se multiplie en symétrie.', en: 'Every gesture multiplies in symmetry.' } },
 ];
 export const POWER = Object.fromEntries(POWERS.map((p) => [p.id, p]));

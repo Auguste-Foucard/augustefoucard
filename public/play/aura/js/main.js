@@ -167,6 +167,7 @@ function startMode(m, opt) {
 // ---------- Gestes ----------
 let melodyOwner = null;
 const ptrs = new Map(); const ripples = new Ripples(G); const sand = new Sand(G);
+G._ptrs = () => ptrs.values();
 const kCenter = () => ({ x: G.W / 2, y: G.H / 2 });
 const symCount = () => 6 + (G.bloom >= 3 ? 2 : 0);
 
@@ -186,6 +187,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if ((p.power === 'filaments' || p.power === 'kaleido') && melodyOwner === null) { melodyOwner = e.pointerId; audio.strokeStart(p.y / G.H, p.power); }
   if (p.power === 'fireworks') p.charge = new Charge(G, p.x, p.y, p.id);
   if (p.power === 'water') ripples.add(p.x, p.y, 1);
+  if (p.power === 'magnet' && sand.holding === null) sand.press(p);
   addVis(p, p.x, p.y, 0);
 }, { passive: false });
 
@@ -221,7 +223,8 @@ function endPointer(e) {
   const p = ptrs.get(e.pointerId); if (!p) return; ptrs.delete(e.pointerId); if (!ptrs.size) ui.drawing(false);
   if (melodyOwner === e.pointerId) { melodyOwner = null; audio.strokeEnd(); } // la phrase se pose (ou une seule note pour une touche)
   if (p.power === 'fireworks') { p.charge.release(); return; }
-  if (p.power === 'water' || p.power === 'magnet') return;
+  if (p.power === 'magnet') { sand.release(p); return; }
+  if (p.power === 'water') return;
   const dur = G.t - p.t0;
   if (p.dist < 14) { // simple touche : une pluie d'étincelles et une note
     burst(G.P, p.x, p.y, { n: Math.round(14 * G.pm), speed: 70, life: 1.4, s: 3.5, k: 0, h: p.h, spread: 0.6 });
