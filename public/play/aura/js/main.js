@@ -14,6 +14,7 @@ import { t, L, setLang, lang } from './i18n.js';
 import { UI } from './ui.js';
 import { playIntro } from './intro.js';
 import { Breath, Sleep } from './serenity.js';
+import { SKY, SkyPuzzle, nextSky, skyCost, skySpot, edgesOf } from './sky.js';
 
 const SAVE_KEY = 'aura.save.v1';
 const canvas = document.getElementById('c');
@@ -58,7 +59,7 @@ function refresh() {
   G.reduced = set.reduced;
   const sleeping = G.mode === 'sleep';
   G.intensity = set.intensity * (set.night ? 0.72 : 1) * (sleeping ? 0.5 : 1);
-  G.pmBase = (1 + 0.3 * u.particles) * (0.45 + 0.55 * set.intensity) * G.quality * (set.reduced ? 0.55 : 1) * (set.night ? 0.75 : 1) * (sleeping ? 0.5 : 1);
+  G.pmBase = (1 + 0.16 * u.particles) * (0.45 + 0.55 * set.intensity) * G.quality * (set.reduced ? 0.55 : 1) * (set.night ? 0.75 : 1) * (sleeping ? 0.5 : 1);
   G.pm = G.pmBase * (G.lod ?? 1);
   G.lifeMult = 1 + 0.25 * u.life; G.trailMult = 1 + 0.25 * u.trails; G.burstMult = 1 + 0.12 * u.bursts; G.bloom = u.bloom; G.bursts = u.bursts; G.colors = u.colors; G.trails = u.trails;
   G.strands = Math.min(4, 1 + Math.floor(u.trails / 3) + (u.particles >= 6 ? 1 : 0));
@@ -97,7 +98,7 @@ window.visualViewport?.addEventListener('resize', resize);
 setTimeout(resize, 400); // iOS finit parfois de mesurer après le premier affichage
 
 // ---------- Lumière ----------
-const ui = new UI(G, { buy, setPower, setSetting, startMode, reset, dawn, save: () => (dirty = true) });
+const ui = new UI(G, { buy, setPower, setSetting, startMode, reset, dawn, awakenSky, save: () => (dirty = true) });
 
 function earn(amount, x = 0, y = 0, src = '', quiet = false) {
   if (!(amount > 0)) return;
@@ -164,6 +165,32 @@ function dawn() {
   return true;
 }
 
+// ---------- Rallume le ciel ----------
+/** Payer la Lumière demandée puis relier les étoiles de la prochaine constellation. */
+function awakenSky() {
+  const c = nextSky(state); if (!c || state.level < c.gate) return false;
+  const cost = skyCost(c); if (state.light < cost) return false;
+  state.light -= cost; dirty = true; audio.ui('buy'); startMode('sky', c); return true;
+}
+function onSkyDone(pz) {
+  const c = pz.c; const i = SKY.indexOf(c); state.sky = [...(state.sky || []), c.id]; dirty = true;
+  // La constellation reste dans le ciel de l'univers, à sa place, pour toujours (même après une Nouvelle aube).
+  const spot = skySpot(i); const S = Math.min(G.W, G.H) * 0.2;
+  G.universe.addConstellation(c.pts.map(([x, y]) => ({ x: spot.x * G.W + (x - 0.5) * S, y: spot.y * G.H + (y - 0.5) * S })), pz.h, edgesOf(c), true);
+  earn(skyCost(c) * 1.3, G.W / 2, G.H / 2, 'sky');
+  ui.toast(L(c.name), L(c.tale), 7000, 5);
+  if (state.sky.length === SKY.length) { G.universe.addAurora(45); setTimeout(() => ui.toast(t('skyAll'), t('skyAll2'), 6000, 5), 7600); }
+  save(); setTimeout(() => G.mode === 'sky' && startMode('play'), 900);
+}
+/** Rappel discret (une fois par constellation) quand la suivante peut être réveillée. */
+let skyT = 3;
+function checkSky(dt) {
+  skyT -= dt; if (skyT > 0 || G.mode !== 'play') return; skyT = 3;
+  const c = nextSky(state); const ready = !!c && state.level >= c.gate && state.light >= skyCost(c);
+  ui.skyReady(ready);
+  if (ready && !state.seen['sky_' + c.id]) { state.seen['sky_' + c.id] = 1; dirty = true; ui.toast(t('skyReady'), t('skyReady2'), 4200, 3); audio.note(14, { kind: 'bell', vel: 0.25 }); }
+}
+
 // ---------- Le Chemin ----------
 let questT = 2;
 function checkQuests(dt) {
@@ -177,13 +204,15 @@ function checkQuests(dt) {
 }
 
 // ---------- Modes ----------
-let breath = null; let sleep = null; let autoT = 0;
+let breath = null; let sleep = null; let skyP = null; let autoT = 0;
 function startMode(m, opt) {
   if (breath) { breath.stop(); breath = null; if (m !== 'sleep') audio.bed(false); }
   if (sleep && m !== 'sleep') { sleep.stop(); sleep = null; }
+  if (m !== 'sky') skyP = null;
   const wasCalm = G.mode === 'sleep';
   G.mode = m; document.body.dataset.mode = m; ui.closeSheet();
-  if (m === 'breathe' || m === 'sleep') for (const c of G.creations) c.life = Math.min(c.life, c.age + 1.2);
+  if (m === 'sky') { skyP = new SkyPuzzle(G, opt, { done: onSkyDone }); ui.clearToasts(); setTimeout(() => ui.toast(L(opt.name), t('skyHint'), 3600, 3), 300); }
+  if (m === 'breathe' || m === 'sleep' || m === 'sky') for (const c of G.creations) c.life = Math.min(c.life, c.age + 1.2);
   if (m === 'breathe') breath = new Breath(G, opt || 'calm', {
     label: (id, sub) => ui.breath(t(id), sub),
     done: (n) => { state.stats.breaths = (state.stats.breaths || 0) + 1; earn(n * 3 * gainMult(state), G.W / 2, G.H / 2, 'breath', true); ui.toast(t('breathDone', { n }), t('constellationBorn'), 4200, 3); setTimeout(() => G.mode === 'breathe' && startMode('play'), 600); },
@@ -211,6 +240,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if ((G.mode === 'free') && e.clientX > G.W - 64 && e.clientY < 64) { startMode('play'); return; }
   try { canvas.setPointerCapture?.(e.pointerId); } catch { /* toucher déjà terminé : on continue sans capture */ }
   const p = { id: e.pointerId, x: e.clientX, y: e.clientY, raw: [{ x: e.clientX, y: e.clientY }], vis: [], t0: G.t, last: performance.now(), lx: e.clientX, ly: e.clientY, dist: 0, power: state.power, h: nextHue(), hapD: 0, primary: ptrs.size === 0 }; // seul le premier doigt posé rapporte de la Lumière
+  if (G.mode === 'sky') { p.power = 'filaments'; skyP?.beginStroke(); skyP?.trace(p.x, p.y); }
   ptrs.set(e.pointerId, p); ui.drawing(true);
   // Le premier doigt qui dessine mène la mélodie.
   if ((p.power === 'filaments' || p.power === 'kaleido') && melodyOwner === null) { melodyOwner = e.pointerId; audio.strokeStart(p.y / G.H, p.power); }
@@ -229,10 +259,11 @@ canvas.addEventListener('pointermove', (e) => {
     p.last = now; p.lx = x; p.ly = y; p.x = x; p.y = y; p.dist += d; p.raw.push({ x, y }); if (p.raw.length > 1400) p.raw = p.raw.filter((_, j) => j % 2 === 0);
     addVis(p, x, y, speed);
     if (p.power === 'filaments' || p.power === 'kaleido') {
+      if (G.mode === 'sky') skyP?.trace(x, y);
       // Particules qui naissent du geste.
       const n = d * 0.05 * G.pm; for (let i = 0; i < n || Math.random() < n; i++) { if (i > 8) break; const a = rand(TAU); const v = rand(10, 40) + speed * 25; G.P.add(x, y, Math.cos(a) * v, Math.sin(a) * v, { k: Math.random() < 0.3 + G.trailMult * 0.05 ? 1 : 0, life: rand(0.8, 1.8) * (0.8 + G.trailMult * 0.2), s: rand(2, 4.5), h: p.h + rand(-20, 20) + G.t * 30, grav: -8, tur: 16 }); }
       if (melodyOwner === p.id) audio.gesture(y / G.H, speed, (x / G.W) * 2 - 1, p.power, dyMove);
-      if (p.primary) earn(d * 0.0016 * gainMult(state), x, y, 'stroke', true);
+      if (p.primary && G.mode !== 'sky') earn(d * 0.0016 * gainMult(state), x, y, 'stroke', true);
     } else if (p.power === 'fireworks' && p.charge) p.charge.move(x, y);
     else if (p.power === 'water') { ripples.follow(p); p.wd = (p.wd || 0) + d; if (p.wd > 70) { p.wd = 0; ripples.add(x, y, 0.5, null, false, !p.primary); } }
     p.hapD += d; if (p.hapD > 140) { p.hapD = 0; haptic('tick'); }
@@ -251,6 +282,7 @@ function addVis(p, x, y, speed) {
 function endPointer(e) {
   const p = ptrs.get(e.pointerId); if (!p) return; ptrs.delete(e.pointerId); if (!ptrs.size) ui.drawing(false);
   if (melodyOwner === e.pointerId) { melodyOwner = null; audio.strokeEnd(); } // la phrase se pose (ou une seule note pour une touche)
+  if (G.mode === 'sky') { skyP?.endStroke(); if (p.vis.length > 2) G.filaments.push(new Filament(G, p.vis)); return; }
   if (p.power === 'fireworks') { p.charge.release(); return; }
   if (p.power === 'magnet') { sand.release(p); return; }
   if (p.power === 'water') { ripples.release(p); return; }
@@ -358,10 +390,10 @@ function tick(now) {
   { const load = G.creations.length + G.effects.length * 2 + G.filaments.length * 0.5 + G.P.n / 600; G.lod = clamp(1.25 - load * 0.05, 0.4, 1); G.pm = G.pmBase * G.lod; }
   if (G.filaments.length > 14) { const old = G.filaments.find((f) => f.life > G.t - f.born + 0.6); if (old) old.life = G.t - old.born + 0.6; }
   // Exposition automatique : beaucoup de lumière superposée ne doit jamais éblouir.
-  const live = G.creations.length + G.effects.length * 2; G.exposure += (clamp(1.6 / Math.sqrt(Math.max(1, live / 3)), 0.45, 1) * (sleep ? 0.45 : 1) - G.exposure) * Math.min(1, dt * 2);
+  const live = G.creations.length + G.effects.length * 2 + G.filaments.length * 0.4 + G.P.n / 300; G.exposure += (clamp(1.5 / Math.sqrt(Math.max(1, live / 3)), 0.4, 1) * (sleep ? 0.45 : 1) - G.exposure) * Math.min(1, dt * 2);
   if (G.creations.length > 12) { const old = G.creations.find((c) => !c.reacted && c.life > c.age + 1); if (old) old.life = old.age + 1; } G.effects = G.effects.filter((o) => !o.dead); G.filaments = G.filaments.filter((o) => !o.dead);
   ripples.update(dt);
-  checkQuests(dt);
+  checkQuests(dt); checkSky(dt);
   if (breath) breath.update(dt);
   if (sleep) sleep.update(dt);
   if (G.mode === 'contemplate' || (sleep && !sleep.ended)) { autoT -= dt; if (autoT < 0) { autoT = sleep ? rand(12, 18) : rand(3.5, 6.5); autoCreate(); } }
@@ -381,7 +413,8 @@ function tick(now) {
   for (const o of G.creations) o.draw(ctx); mark('creations');
   for (const o of G.effects) o.draw(ctx); mark('effects');
   drawLive();
-  G.P.draw(ctx, G.intensity); mark('particles.draw');
+  G.P.draw(ctx, G.intensity * clamp(1.4 / Math.sqrt(Math.max(1, G.P.n / 450)), 0.45, 1)); // beaucoup de particules : chacune plus discrète, pas de blanc mark('particles.draw');
+  if (skyP) skyP.draw(ctx);
   if (breath) breath.draw(ctx);
   if (sleep) sleep.draw(ctx);
   drawMotes(dt);
@@ -493,7 +526,7 @@ async function checkUpdate(force = false) {
   } catch { /* hors ligne : on réessaiera plus tard */ }
 }
 function applyUpdate(target) {
-  if (ptrs.size || G.mode === 'breathe' || G.mode === 'sleep') { setTimeout(() => applyUpdate(target), 1500); return; } // jamais au milieu d'un geste
+  if (ptrs.size || G.mode === 'breathe' || G.mode === 'sleep' || G.mode === 'sky') { setTimeout(() => applyUpdate(target), 1500); return; } // jamais au milieu d'un geste
   try { sessionStorage.setItem('aura.upd', target); sessionStorage.setItem('aura.quick', '1'); } catch { /* indisponible */ }
   updating = true; save(); ui.toast(t('updating'), '', 1400, 4);
   document.body.classList.add('leaving'); setTimeout(() => location.reload(), 900);

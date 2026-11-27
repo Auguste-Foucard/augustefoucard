@@ -2,6 +2,7 @@
 import { FORMS, POWERS, COMBOS, UPGRADES, UPGRADE, upCost, reqMet, xpFor, passiveRate, QUESTS, PALETTE_UNLOCK, dawnGain, DAWN_LEVEL } from './economy.js';
 import { PALETTES } from './fx.js';
 import { PATTERNS } from './serenity.js';
+import { SKY, nextSky, skyCost, edgesOf } from './sky.js';
 import { glyph } from './shapes.js';
 import { t, L, lang } from './i18n.js';
 import { fmt } from './util.js';
@@ -35,7 +36,7 @@ export class UI {
         <div class="actions">
           <button class="ib" data-open="powers" id="bPow" aria-label="${t('tabPowers')}">${svg('filaments')}</button>
           <button class="ib" data-open="evolve" aria-label="${t('tabEvolve')}">${svg('evolve')}<i class="dot" id="dotEvolve"></i></button>
-          <button class="ib" data-open="codex" aria-label="${t('tabCodex')}">${svg('menu')}</button>
+          <button class="ib" data-open="sky" aria-label="${t('tabSky')}">${svg('menu')}<i class="dot" id="dotSky"></i></button>
         </div>
       </div>
       <div class="chip" id="chip"></div>
@@ -46,6 +47,8 @@ export class UI {
       <div class="sheet-wrap" id="sheetWrap" hidden>
         <div class="sheet" id="sheet" role="dialog" aria-modal="true">
           <div class="grab"></div>
+          <button class="gear" data-tab="settings" aria-pressed="false" aria-label="${t('tabSettings')}">${svg('gear', 18)}</button>
+          <button class="x" data-close aria-label="${t('close')}">${svg('close', 18)}</button>
           <nav class="tabs" id="tabs"></nav>
           <div class="sheet-body" id="body"></div>
         </div>
@@ -55,7 +58,8 @@ export class UI {
     this.$('counter').addEventListener('click', () => this.openSheet('evolve'));
     this.$('exit').addEventListener('click', () => this.act.startMode('play'));
     this.$('sheetWrap').addEventListener('pointerdown', (e) => { if (e.target.id === 'sheetWrap') this.closeSheet(); });
-    this.$('tabs').addEventListener('click', (e) => { if (e.target.closest('[data-close]')) { this.closeSheet(); return; } const b = e.target.closest('[data-tab]'); if (b) { this.tab = b.dataset.tab; audio.ui(); this.render(); } });
+    this.$('sheet').addEventListener('click', (e) => { if (e.target.closest('[data-close]')) this.closeSheet(); });
+    this.$('sheet').addEventListener('click', (e) => { if (e.target.closest('#body')) return; const b = e.target.closest('[data-tab]'); if (b) { this.tab = b.dataset.tab; audio.ui(); this.render(); } });
     this.$('body').addEventListener('click', (e) => this.onBody(e));
     this.$('body').addEventListener('input', (e) => { const r = e.target.closest('[data-range]'); if (r) this.act.setSetting(r.dataset.range, +r.value / 100); });
     // Glisser la feuille vers le bas pour la fermer.
@@ -79,8 +83,12 @@ export class UI {
     const affordable = UPGRADES.some((u) => s.up[u.id] < u.max && reqMet(s, u) && upCost(u.id, s.up[u.id]) <= s.light);
     this.$('dotEvolve').classList.toggle('on', affordable);
     if (!this.$('sheetWrap').hidden && this.tab === 'evolve' && (this._lastEv ?? -1) !== v) { this._lastEv = v; this.refreshCosts(); }
+    if (!this.$('sheetWrap').hidden && this.tab === 'sky') { const b = this.$('body').querySelector('[data-sky]'); const n = nextSky(this.s); if (b && n) b.disabled = this.s.light < skyCost(n); }
   }
   counterPos() { const r = this.$('lv').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+  /** Vide la file des messages (on change de moment : seul le nouveau message compte). */
+  clearToasts() { this.q = []; }
+  skyReady(on) { this.$('dotSky').classList.toggle('on', on); }
   /** Petit scintillement du compteur quand la lumière du repos arrive : discret. */
   glint() { const c = this.$('counter'); c.classList.remove('glint'); void c.offsetWidth; c.classList.add('glint'); }
   pulse() { const c = this.$('counter'); c.classList.remove('pulse'); void c.offsetWidth; c.classList.add('pulse'); }
@@ -112,9 +120,23 @@ export class UI {
     this.$('bPow').innerHTML = svg(p.id);
     this.$('unit').textContent = t('light');
     if (this.$('sheetWrap').hidden) return;
-    const tabs = [['evolve', t('tabEvolve')], ['powers', t('tabPowers')], ['codex', t('tabCodex')], ['calm', t('tabCalm')]];
-    this.$('tabs').innerHTML = tabs.map(([id, n]) => `<button data-tab="${id}" aria-pressed="${this.tab === id}">${n}</button>`).join('') + `<button class="gear" data-tab="settings" aria-pressed="${this.tab === 'settings'}" aria-label="${t('tabSettings')}">${svg('gear', 18)}</button>` + `<button class="x" data-close aria-label="${t('close')}">${svg('close', 18)}</button>`;
+    const tabs = [['sky', t('tabSky')], ['evolve', t('tabEvolve')], ['powers', t('tabPowers')], ['codex', t('tabCodex')], ['calm', t('tabCalm')]];
+    this.$('tabs').innerHTML = tabs.map(([id, n]) => `<button data-tab="${id}" aria-pressed="${this.tab === id}">${n}</button>`).join('');
+    this.$('sheet').querySelector(':scope > .gear').setAttribute('aria-pressed', String(this.tab === 'settings'));
     const body = this.$('body'); body.innerHTML = this['tab_' + this.tab]();
+  }
+
+  tab_sky() {
+    const s = this.s; const done = s.sky || []; const next = nextSky(s);
+    const glyph = (c, lit, size = 64) => { const e = edgesOf(c); return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true">${e.map(([a, b]) => `<line x1="${c.pts[a][0] * 100}" y1="${c.pts[a][1] * 100}" x2="${c.pts[b][0] * 100}" y2="${c.pts[b][1] * 100}" stroke="currentColor" stroke-width="${lit ? 2.2 : 1.2}" stroke-linecap="round" ${lit ? '' : 'stroke-dasharray="2 5" opacity=".5"'}/>`).join('')}${c.pts.map(([x, y]) => `<circle cx="${x * 100}" cy="${y * 100}" r="${lit ? 3.4 : 2.4}" fill="currentColor" ${lit ? '' : 'opacity=".6"'}/>`).join('')}</svg>`; };
+    let nextCard = '';
+    if (next) {
+      const cost = skyCost(next); const lvlOk = s.level >= next.gate;
+      nextCard = `<article class="skynext"><span class="sg">${glyph(next, false, 92)}</span><span class="pt"><small>${t('skyNext')}</small><b>${L(next.name)}</b>
+        ${lvlOk ? `<button class="buy" data-sky ${s.light < cost ? 'disabled' : ''}><span>${t('skyAwake')}</span> <b data-skycost>${this.fmt(cost)}</b></button>` : `<small class="lockd">${svg('lock', 13)} ${t('skyLevel', { n: next.gate })}</small>`}</span></article>`;
+    } else nextCard = `<p class="note">${t('skyAll2')}</p>`;
+    return `<p class="note skyintro">${t('skyIntro')}</p><div class="sum"><span>${done.length} <small>/ ${SKY.length}</small></span><small>${t('skyProgress', { n: done.length, p: 12 * done.length })}</small></div>${nextCard}
+      <div class="skygrid">${SKY.map((c) => { const lit = done.includes(c.id); const isNext = next && c.id === next.id; return `<div class="skycell ${lit ? 'lit' : ''} ${isNext ? 'next' : ''}">${lit || isNext ? glyph(c, lit, 54) : '<span class="q">?</span>'}<b>${lit || isNext ? L(c.name) : t('unknown')}</b>${lit ? `<small>${L(c.tale)}</small>` : ''}</div>`; }).join('')}</div>`;
   }
 
   tab_evolve() {
@@ -188,6 +210,7 @@ export class UI {
   onBody(e) {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.buy) { if (this.act.buy(b.dataset.buy)) this.render(); return; }
+    if (b.dataset.sky !== undefined) { if (this.act.awakenSky()) this.closeSheet(); return; }
     if (b.dataset.dawn !== undefined) { if (confirm(t('dawnConfirm', { n: dawnGain(this.s) }))) { this.act.dawn(); this.closeSheet(); } return; }
     if (b.dataset.power) { this.act.setPower(b.dataset.power); this.closeSheet(); return; }
     if (b.dataset.mode) { this.act.startMode(b.dataset.mode); return; }

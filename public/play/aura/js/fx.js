@@ -48,7 +48,7 @@ function buildSprites() {
   for (let i = 0; i < BUCKETS; i++) {
     const h = i * 10; const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
     const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    gr.addColorStop(0, `hsla(${h},${s}%,96%,1)`); gr.addColorStop(0.12, `hsla(${h},${s}%,80%,0.85)`);
+    gr.addColorStop(0, `hsla(${h},${s}%,90%,1)`); gr.addColorStop(0.12, `hsla(${h},${s}%,74%,0.8)`); // cœur coloré : garde sa teinte quand tout se superpose
     gr.addColorStop(0.32, `hsla(${h},${s}%,64%,0.32)`); gr.addColorStop(0.62, `hsla(${h},${s}%,56%,0.08)`); gr.addColorStop(1, `hsla(${h},${s}%,50%,0)`);
     g.fillStyle = gr; g.fillRect(0, 0, 64, 64); sprites.push(c);
     // Rideau vertical d'aurore.
