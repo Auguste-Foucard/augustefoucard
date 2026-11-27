@@ -7,45 +7,52 @@ const F = (type, n, fr, en, tab = null) => ({ kind: 'form', type, n, name: { fr,
 const LV = (n, fr, en) => ({ kind: 'level', n, name: { fr, en }, metric: (s) => s.level, tab: null });
 const SK = (id) => { const c = SKY.find((x) => x.id === id); return { kind: 'sky', id, n: 1, name: { fr: 'Rallume ' + c.name.fr, en: 'Light up ' + c.name.en }, metric: (s) => ((s.sky || []).includes(id) ? 1 : 0), tab: 'sky' }; };
 const PW = (id, fr, en) => ({ kind: 'power', id, n: 1, name: { fr, en }, rel: true, metric: (s) => (s.stats.powers || {})[id] || 0, tab: 'powers' });
-const X = (kind, n, metric, fr, en, tab = null, rel = true) => ({ kind, n, metric, name: { fr, en }, rel, tab });
+const X = (kind, n, metric, fr, en, tab = null, rel = true, hint = null) => ({ kind, n, metric, name: { fr, en }, rel, tab, hint });
 
 export const OBJECTIVES = [
   F('line', 1, 'Trace une ligne', 'Draw a line'),
   F('line', 3, 'Trace 3 lignes', 'Draw 3 lines'),
   LV(2, 'Atteins le niveau 2', 'Reach level 2'),
   F('circle', 1, 'Dessine un cercle', 'Draw a circle'),
-  X('buy', 1, (s) => sum(s.up), 'Achète une amélioration (Évolution)', 'Buy an upgrade (Evolve)', 'evolve'),
+  X('buy', 1, (s) => sum(s.up), 'Achète une amélioration', 'Buy an upgrade', 'evolve', true, { fr: 'Touche ici pour ouvrir Évolution', en: 'Tap here to open Evolve' }),
   SK('plume'),
   LV(3, 'Atteins le niveau 3', 'Reach level 3'),
   F('wave', 1, 'Dessine une vague', 'Draw a wave'),
-  PW('fireworks', 'Essaie les Feux d’artifice (Pouvoirs)', 'Try Fireworks (Powers)'),
+  PW('fireworks', 'Essaie les Feux d’artifice', 'Try Fireworks'),
   SK('oiseau'),
-  X('combo', 1, (s) => Object.keys(s.combos).length, 'Trouve une harmonie : 3 cercles d’affilée', 'Find a harmony: 3 circles in a row', null),
+  X('combo', 1, (s) => Object.keys(s.combos).length, 'Dessine 3 cercles à la suite', 'Draw 3 circles in a row', null, true, { fr: 'Vite, sans attendre entre chaque cercle', en: 'Quickly, without waiting between them' }),
   F('spiral', 1, 'Dessine une spirale', 'Draw a spiral'),
   SK('barque'),
-  PW('water', 'Essaie l’Eau (Pouvoirs)', 'Try Water (Powers)'),
+  PW('water', 'Essaie l’Eau', 'Try Water'),
   F('triangle', 1, 'Dessine un triangle', 'Draw a triangle'),
   SK('couronne'),
   F('star', 1, 'Dessine une étoile', 'Draw a star'),
-  X('cosmic', 1, (s) => s.combos.cosmic || 0, 'Dessine un cercle puis une étoile, l’un près de l’autre', 'Draw a circle and a star close together'),
-  PW('magnet', 'Essaie le Magnétisme (Pouvoirs)', 'Try Magnetism (Powers)'),
+  X('cosmic', 1, (s) => s.combos.cosmic || 0, 'Dessine un cercle et une étoile', 'Draw a circle and a star', null, true, { fr: 'L’un à côté de l’autre, rapidement', en: 'Next to each other, quickly' }),
+  PW('magnet', 'Essaie le Magnétisme', 'Try Magnetism'),
   SK('lanterne'),
-  PW('kaleido', 'Essaie le Kaléidoscope (Pouvoirs)', 'Try the Kaleidoscope (Powers)'),
+  PW('kaleido', 'Essaie le Kaléidoscope', 'Try the Kaleidoscope'),
   F('flower', 1, 'Dessine une fleur', 'Draw a flower'),
   SK('phare'),
-  X('breathe', 1, (s) => s.stats.breaths || 0, 'Fais un exercice de respiration (Sérénité)', 'Do a breathing exercise (Serenity)', 'calm'),
+  X('breathe', 1, (s) => s.stats.breaths || 0, 'Fais un exercice de respiration', 'Do a breathing exercise', 'calm', true, { fr: 'Touche ici pour ouvrir Sérénité', en: 'Tap here to open Serenity' }),
   SK('cle'),
   F('heart', 1, 'Dessine un cœur', 'Draw a heart'),
   SK('arbre'),
   F('infinity', 1, 'Dessine un infini', 'Draw an infinity sign'),
   SK('cerf'),
-  F('mandala', 1, 'Dessine une forme fermée en Kaléidoscope', 'Draw a closed shape in Kaleidoscope'),
+  F('mandala', 1, 'Dessine une forme fermée avec le Kaléidoscope', 'Draw a closed shape with the Kaleidoscope'),
   SK('harpe'),
-  X('dawn', 1, (s) => s.dawns || 0, 'Fais une Nouvelle aube (Évolution)', 'Do a New dawn (Evolve)', 'evolve'),
+  X('dawn', 1, (s) => s.dawns || 0, 'Fais une Nouvelle aube', 'Do a New dawn', 'evolve', true, { fr: 'Touche ici pour ouvrir Évolution', en: 'Tap here to open Evolve' }),
   SK('baleine'),
   SK('coeur'),
 ];
 
+/** Le pouvoir qu'il faut pour réussir l'objectif (null : peu importe). */
+export function objPower(o) {
+  if (o.kind === 'power') return o.id;
+  if (o.kind === 'form') return o.type === 'mandala' ? 'kaleido' : 'filaments';
+  if (o.kind === 'combo' || o.kind === 'cosmic') return 'filaments';
+  return null;
+}
 /** Objectif en cours (ou null quand tout est accompli). */
 export function currentObjective(s) {
   const i = s.obj?.i ?? 0; const o = OBJECTIVES[i]; if (!o) return null;

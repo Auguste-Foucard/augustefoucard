@@ -49,7 +49,7 @@ body.entering #ui * { pointer-events: none !important; }
 @keyframes chip { 12% { opacity: 1; transform: translate(-50%, 0); } 75% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -4px); } }
 
 /* Messages */
-.toasts { position: absolute; left: 0; right: 0; top: calc(var(--st) + 15%); display: grid; justify-items: center; pointer-events: none; padding: 0 24px; }
+.toasts { position: absolute; left: 0; right: 0; top: max(calc(var(--st) + 15%), calc(var(--st) + 178px)); display: grid; justify-items: center; pointer-events: none; padding: 0 24px; }
 .toast { grid-area: 1 / 1; text-align: center; opacity: 0; transform: translateY(10px); filter: blur(6px); transition: opacity 0.9s ease, transform 0.9s ease, filter 0.9s ease; max-width: 340px; }
 .toast.in { opacity: 1; transform: none; filter: none; }
 .toast.out { opacity: 0; transform: translateY(-8px); filter: blur(6px); }
