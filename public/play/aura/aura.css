@@ -158,3 +158,8 @@ body.leaving canvas#c, body.leaving #ui { opacity: 0; transition: opacity 0.8s e
 .picks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .pick { padding: 8px 12px; border-radius: 13px; font-size: 12.5px; border: 1px solid rgba(201, 184, 255, 0.35); background: rgba(201, 184, 255, 0.08); color: var(--ink); transition: background 0.3s, transform 0.15s; }
 .pick:active { transform: scale(0.95); background: rgba(201, 184, 255, 0.22); }
+
+/* Mode avant de dormir : la carte la plus visible de Sérénité. */
+.pow.sleepcard { border-color: rgba(255, 176, 120, 0.45); background: linear-gradient(135deg, rgba(255, 150, 90, 0.16), rgba(200, 90, 140, 0.1)); }
+.pow.sleepcard .pi { color: #ffc49a; background: rgba(255, 170, 110, 0.12); }
+.pow.sleepcard .pick { border-color: rgba(255, 176, 120, 0.45); background: rgba(255, 160, 100, 0.12); }

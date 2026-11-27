@@ -150,13 +150,12 @@ export class UI {
   tab_calm() {
     const MOON = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>';
     return `<p class="note">${t('calmNote')}</p><div class="list">
-      <div class="pow calm"><span class="pi">${MOON}</span><span class="pt"><b>${t('sleepTitle')}</b><small>${t('sleepDesc')}</small>
+      <div class="pow calm sleepcard"><span class="pi">${MOON}</span><span class="pt"><b>${t('sleepTitle')}</b><small>${t('sleepDesc')}</small>
         <span class="picks">${[15, 30, 45, 60].map((m) => `<button class="pick" data-sleep="${m}">${m} min</button>`).join('')}</span></span></div>
       <div class="pow calm"><span class="pi">${svg('water', 26)}</span><span class="pt"><b>${t('breathe')}</b><small>${t('breatheDesc2')}</small>
         <span class="picks">${Object.entries(PATTERNS).map(([id, p]) => `<button class="pick" data-breath="${id}">${L(p.name)}</button>`).join('')}</span></span></div>
       <button class="pow" data-mode="contemplate"><span class="pi">${svg('powers', 26)}</span><span class="pt"><b>${t('contemplate')}</b><small>${t('contemplateDesc')}</small></span></button>
       <button class="pow" data-mode="free"><span class="pi">${svg('filaments', 26)}</span><span class="pt"><b>${t('free')}</b><small>${t('freeDesc')}</small></span></button>
-      <button class="pow ${this.s.settings.night ? 'sel' : ''}" data-toggle="night"><span class="pi">${MOON}</span><span class="pt"><b>${t('night')}</b><small>${t('nightDesc')} · ${this.s.settings.night ? t('on') : t('off')}</small></span></button>
     </div>`;
   }
 
@@ -167,7 +166,7 @@ export class UI {
     const tog = (k, label) => `<button class="row tog" data-toggle="${k}" aria-pressed="${!!st[k]}"><span>${label}</span><i></i></button>`;
     return `<div class="settings">
       ${range('sound', t('sound'))}${range('music', t('music'))}${range('intensity', t('intensity'))}
-      ${tog('haptics', t('haptics'))}${tog('reduced', t('reduced'))}${tog('night', t('night'))}
+      ${tog('haptics', t('haptics'))}${tog('reduced', t('reduced'))}
       <div class="row col"><span>${t('palette')}</span><div class="pals">${Object.entries(PALETTES).map(([id, p]) => `<button data-pal="${id}" aria-pressed="${st.palette === id}" style="--g:linear-gradient(90deg,${p.stops.map((h) => `hsl(${h},${p.sat}%,70%)`).join(',')})"><i></i>${L(p.name)}</button>`).join('')}</div></div>
       <div class="row"><span>${t('lang')}</span><div class="seg"><button data-lang="fr" aria-pressed="${lang === 'fr'}">FR</button><button data-lang="en" aria-pressed="${lang === 'en'}">EN</button></div></div>
       <p class="note">${t('silentHint')}</p>
