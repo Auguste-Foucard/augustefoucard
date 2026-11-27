@@ -181,13 +181,13 @@ canvas.addEventListener('pointerdown', (e) => {
   if (sleep && sleep.ended) { startMode('play'); return; }
   if ((G.mode === 'free') && e.clientX > G.W - 64 && e.clientY < 64) { startMode('play'); return; }
   canvas.setPointerCapture?.(e.pointerId);
-  const p = { id: e.pointerId, x: e.clientX, y: e.clientY, raw: [{ x: e.clientX, y: e.clientY }], vis: [], t0: G.t, last: performance.now(), lx: e.clientX, ly: e.clientY, dist: 0, power: state.power, h: nextHue(), hapD: 0 };
+  const p = { id: e.pointerId, x: e.clientX, y: e.clientY, raw: [{ x: e.clientX, y: e.clientY }], vis: [], t0: G.t, last: performance.now(), lx: e.clientX, ly: e.clientY, dist: 0, power: state.power, h: nextHue(), hapD: 0, primary: ptrs.size === 0 }; // seul le premier doigt posé rapporte de la Lumière
   ptrs.set(e.pointerId, p); ui.drawing(true);
   // Le premier doigt qui dessine mène la mélodie.
   if ((p.power === 'filaments' || p.power === 'kaleido') && melodyOwner === null) { melodyOwner = e.pointerId; audio.strokeStart(p.y / G.H, p.power); }
-  if (p.power === 'fireworks') p.charge = new Charge(G, p.x, p.y, p.id);
+  if (p.power === 'fireworks') { p.charge = new Charge(G, p.x, p.y, p.id); p.charge.primary = p.primary; }
   if (p.power === 'water') ripples.press(p);
-  if (p.power === 'magnet' && sand.holding === null) sand.press(p);
+  if (p.power === 'magnet' && sand.holding === null && p.primary) sand.press(p);
   addVis(p, p.x, p.y, 0);
 }, { passive: false });
 
@@ -203,9 +203,9 @@ canvas.addEventListener('pointermove', (e) => {
       // Particules qui naissent du geste.
       const n = d * 0.05 * G.pm; for (let i = 0; i < n || Math.random() < n; i++) { if (i > 8) break; const a = rand(TAU); const v = rand(10, 40) + speed * 25; G.P.add(x, y, Math.cos(a) * v, Math.sin(a) * v, { k: Math.random() < 0.3 + G.trailMult * 0.05 ? 1 : 0, life: rand(0.8, 1.8) * (0.8 + G.trailMult * 0.2), s: rand(2, 4.5), h: p.h + rand(-20, 20) + G.t * 30, grav: -8, tur: 16 }); }
       if (melodyOwner === p.id) audio.gesture(y / G.H, speed, (x / G.W) * 2 - 1, p.power, dyMove);
-      earn(d * 0.0016 * gainMult(state), x, y, 'stroke', true);
+      if (p.primary) earn(d * 0.0016 * gainMult(state), x, y, 'stroke', true);
     } else if (p.power === 'fireworks' && p.charge) p.charge.move(x, y);
-    else if (p.power === 'water') { ripples.follow(p); p.wd = (p.wd || 0) + d; if (p.wd > 70) { p.wd = 0; ripples.add(x, y, 0.5); } }
+    else if (p.power === 'water') { ripples.follow(p); p.wd = (p.wd || 0) + d; if (p.wd > 70) { p.wd = 0; ripples.add(x, y, 0.5, null, false, !p.primary); } }
     p.hapD += d; if (p.hapD > 140) { p.hapD = 0; haptic('tick'); }
   }
 }, { passive: false });
@@ -228,7 +228,7 @@ function endPointer(e) {
   const dur = G.t - p.t0;
   if (p.dist < 14) { // simple touche : une pluie d'étincelles et une note
     burst(G.P, p.x, p.y, { n: Math.round(14 * G.pm), speed: 70, life: 1.4, s: 3.5, k: 0, h: p.h, spread: 0.6 });
-    earn(0.5 * gainMult(state), p.x, p.y, 'tap', true); return;
+    if (p.primary) earn(0.5 * gainMult(state), p.x, p.y, 'tap', true); return;
   }
   state.stats.strokes++;
   const kal = p.power === 'kaleido'; const opts = kal ? { sym: symCount(), center: kCenter() } : {};
@@ -242,13 +242,13 @@ function endPointer(e) {
   if (!type) {
     G.filaments.push(new Filament(G, p.vis, { ...opts, lifeK: kal ? 1.2 : 1 }));
     const v = Math.max(1, (p.dist / Math.hypot(G.W, G.H)) * 6) * gainMult(state) * (kal ? 1.4 : 1);
-    earn(v, p.x, p.y, 'free');
+    if (p.primary) earn(v, p.x, p.y, 'free');
     return;
   }
   const c = new Creation(G, type, info, opts); G.creations.push(c); state.stats.created++;
   audio.form(type, (c.cx / G.W) * 2 - 1); haptic('soft');
   const size = info.size / Math.min(G.W, G.H);
-  earn(formValue(state, type, size) * (kal ? 1.5 : 1), c.cx, c.cy, type);
+  c.secondary = !p.primary; if (p.primary) earn(formValue(state, type, size) * (kal ? 1.5 : 1), c.cx, c.cy, type);
   const first = !state.forms[type]; state.forms[type] = (state.forms[type] || 0) + 1;
   if (first && type !== 'line') ui.toast(L(FORM[type].name), L(FORM[type].desc), 3200);
   if (type === 'flower') G.universe.addFlower(c.cx, c.cy, c.h0, c.petals, 1);
@@ -259,7 +259,7 @@ function endPointer(e) {
     G.chain = G.t - G.lastReact < 6 ? G.chain + 1 : 0; G.lastReact = G.t;
     const sum = r.parts.reduce((s, o) => s + (FORM[o.type]?.value || 4), 0);
     const isNew = !state.combos[r.combo.id]; state.combos[r.combo.id] = (state.combos[r.combo.id] || 0) + 1;
-    earn(sum * r.combo.value * comboMult(state) * gainMult(state) * (1 + 0.2 * G.chain) * (isNew ? 3 : 1), c.cx, c.cy, 'combo');
+    if (!r.parts.some((o) => o.secondary)) earn(sum * r.combo.value * comboMult(state) * gainMult(state) * (1 + 0.2 * G.chain) * (isNew ? 3 : 1), c.cx, c.cy, 'combo'); // pas de gain si un doigt en plus y a participé
     audio.reaction(isNew || G.chain > 1);
     if (isNew) ui.toast(L(r.combo.name), t('comboFound'), 3600, 2);
     ui.render();
