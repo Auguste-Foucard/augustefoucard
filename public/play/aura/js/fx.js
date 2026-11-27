@@ -8,6 +8,12 @@ export const PALETTES = {
   garden: { stops: [330, 350, 40, 80, 130, 160, 330], sat: 75, name: { fr: 'Jardin', en: 'Garden' } },
   ember: { stops: [345, 10, 25, 40, 30, 15, 345], sat: 80, name: { fr: 'Braise douce', en: 'Soft ember' } },
   moon: { stops: [220, 245, 270, 290, 250, 220], sat: 38, name: { fr: 'Lune', en: 'Moon' } },
+  // Palettes à débloquer sur le Chemin.
+  nebula: { stops: [285, 310, 330, 260, 210, 285], sat: 85, name: { fr: 'Nébuleuse', en: 'Nebula' } },
+  coral: { stops: [350, 8, 22, 175, 190, 350], sat: 78, name: { fr: 'Corail', en: 'Coral' } },
+  frost: { stops: [185, 200, 215, 235, 255, 185], sat: 48, name: { fr: 'Givre', en: 'Frost' } },
+  gold: { stops: [42, 50, 30, 18, 38, 42], sat: 88, name: { fr: 'Or', en: 'Gold' } },
+  iris: { stops: [0, 45, 90, 150, 200, 250, 300, 360], sat: 96, name: { fr: 'Iris', en: 'Iris' } },
 };
 // Teintes du sommeil : ambres et roses très doux, sans bleu (moins stimulant le soir).
 const SLEEP = { stops: [8, 20, 32, 40, 26, 350, 8], sat: 70 };
@@ -121,12 +127,15 @@ export class Particles {
       ctx.globalAlpha = al * 0.8 * intensity; ctx.strokeStyle = `hsl(${h},${sat()}%,78%)`; ctx.lineWidth = 1.4;
       ctx.beginPath();
       for (const i of list) { ctx.moveTo(this.x[i], this.y[i]); ctx.lineTo(this.x[i] - this.vx[i] * trailK, this.y[i] - this.vy[i] * trailK); }
-      ctx.stroke();
+      ctx.stroke(); ctx.lineWidth = 2.6; ctx.globalAlpha = Math.min(1, al * 1.1 * intensity); ctx.beginPath(); for (const i of list) { ctx.moveTo(this.x[i], this.y[i]); ctx.lineTo(this.x[i] + 0.1, this.y[i]); } ctx.stroke();
     }
+    const W = ctx.canvas.width / (ctx.getTransform ? ctx.getTransform().a || 1 : 1), H = ctx.canvas.height / (ctx.getTransform ? ctx.getTransform().d || 1 : 1);
     for (let i = 0; i < this.n; i++) {
+      if (this.k[i] === 1) continue; // les étincelles sont déjà dessinées en traits lumineux (une seule fois)
+      const x = this.x[i], y = this.y[i]; if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue; // hors écran
       const p = this.age[i] / this.life[i];
       const fin = this.k[i] === 3 ? Math.sin(p * Math.PI) : (p < 0.1 ? p / 0.1 : 1) * Math.pow(1 - p, 1.3);
-      const al = fin * this.a[i] * intensity; if (al < 0.01) continue;
+      const al = fin * this.a[i] * intensity; if (al < 0.02) continue;
       let s = this.s[i] * (this.k[i] === 1 ? 1 - p * 0.6 : 0.7 + p * 0.6);
       if (this.k[i] === 2) s *= 1.6;
       ctx.globalAlpha = Math.min(1, al); ctx.drawImage(sprite(this.h[i]), this.x[i] - s, this.y[i] - s, s * 2, s * 2);

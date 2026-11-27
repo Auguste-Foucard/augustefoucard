@@ -128,7 +128,7 @@ class Audio {
   /** Joue une note pentatonique. kind : kalimba | harp | crystal | piano | bell | drop | glass */
   note(degree, { kind = 'kalimba', vel = 0.6, pan = 0, delay = 0, dur = 1, at = 0, harm = true } = {}) {
     if (!this.ok || this.vol <= 0 || !this.ctx || this.ctx.state !== 'running') return;
-    if (this.voices > 18) return;
+    if (this.voices > 14) return;
     if (this.sleepMode) { degree -= 5; vel *= 0.55; if (kind === 'crystal' || kind === 'glass' || kind === 'bell') kind = 'harp'; dur *= 1.4; }
     const c = this.ctx; const t = at ? Math.max(at, c.currentTime + 0.005) + delay : c.currentTime + 0.005 + delay;
     const f = mtof(degreeToMidi(degree));
@@ -249,7 +249,8 @@ class Audio {
     }[id] || [[7, 0]];
     const kind = { line: 'kalimba', circle: 'crystal', wave: 'harp', spiral: 'glass', triangle: 'crystal', star: 'bell', flower: 'harp', heart: 'piano', infinity: 'kalimba', mandala: 'harp', galaxy: 'bell' }[id] || 'kalimba';
     const at = this.ctx ? this.nextTick(2).t : 0;
-    for (const [d, dl] of seqs) this.note(d, { kind, vel: 0.42, pan: pan * 0.6, delay: dl, at });
+    const play = this.voices > 8 ? seqs.slice(0, 2) : seqs; // beaucoup de sons en cours : signature courte, pas de grésillement
+    for (const [d, dl] of play) this.note(d, { kind, vel: 0.42, pan: pan * 0.6, delay: dl, at });
     if (id === 'heart') this.thump();
   }
 
