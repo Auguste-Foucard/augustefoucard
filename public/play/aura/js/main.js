@@ -11,10 +11,11 @@ import { haptic, setHaptics } from './haptics.js';
 import { FORM, FORMS, POWER, POWERS, newState, earn as earnState, formValue, gainMult, comboMult, passiveRate, UPGRADE, upCost, reqMet } from './economy.js';
 import { t, L, setLang, lang } from './i18n.js';
 import { UI } from './ui.js';
+import { playIntro } from './intro.js';
 
 const SAVE_KEY = 'aura.save.v1';
 const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+const ctx = canvas.getContext('2d', { alpha: false });
 
 // ---------- État ----------
 function load() {
@@ -143,7 +144,7 @@ function firstTouch() {
 }
 
 canvas.addEventListener('pointerdown', (e) => {
-  e.preventDefault(); firstTouch();
+  e.preventDefault(); firstTouch(); if (skipIntro) { skipIntro(); haptic('soft'); }
   if ((G.mode === 'free') && e.clientX > G.W - 64 && e.clientY < 64) { startMode('play'); return; }
   canvas.setPointerCapture?.(e.pointerId);
   const p = { id: e.pointerId, x: e.clientX, y: e.clientY, raw: [{ x: e.clientX, y: e.clientY }], vis: [], t0: G.t, last: performance.now(), lx: e.clientX, ly: e.clientY, dist: 0, power: state.power, h: hue(Math.random()), hapD: 0 };
@@ -356,8 +357,19 @@ addEventListener('pagehide', save);
   }
 }
 
-refresh(); ui.render(); if (!state.seen.intro) ui.showIntro();
+refresh(); ui.render();
 document.body.dataset.mode = 'play';
+
+// ---------- Entrée dans la bulle ----------
+const QS = new URLSearchParams(location.search);
+let quickIntro = false; try { quickIntro = sessionStorage.getItem('aura.quick') === '1'; sessionStorage.removeItem('aura.quick'); } catch { /* indisponible */ }
+let skipIntro = null;
+if (DEMO || QS.has('nointro')) { document.body.classList.remove('entering'); document.getElementById('boot')?.remove(); if (!state.seen.intro) ui.showIntro(); }
+else skipIntro = playIntro({
+  still: QS.has('splash'), quick: quickIntro, reduced: state.settings.reduced,
+  onEnter: () => { if (G.audioOn) audio.enter(); },
+  onDone: () => { skipIntro = null; if (!state.seen.intro) setTimeout(() => ui.showIntro(), 300); },
+});
 requestAnimationFrame((n) => { last = n; frame(n); });
 
 // Démo automatique pour les captures (?demo=1) : quelques formes dessinées seules.
@@ -389,7 +401,7 @@ async function checkUpdate(force = false) {
 }
 function applyUpdate(target) {
   if (ptrs.size || G.mode === 'breathe') { setTimeout(() => applyUpdate(target), 1500); return; } // jamais au milieu d'un geste
-  try { sessionStorage.setItem('aura.upd', target); } catch { /* indisponible */ }
+  try { sessionStorage.setItem('aura.upd', target); sessionStorage.setItem('aura.quick', '1'); } catch { /* indisponible */ }
   updating = true; save(); ui.toast(t('updating'), '', 1400, 4);
   document.body.classList.add('leaving'); setTimeout(() => location.reload(), 900);
 }

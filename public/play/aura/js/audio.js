@@ -208,6 +208,12 @@ class Audio {
     this.swell(big ? 0.9 : 0.5, big ? 5 : 3);
   }
 
+  /** Entrée dans la bulle : un souffle qui s'ouvre et une gamme cristalline qui monte. */
+  enter() {
+    [0, 2, 4, 7, 9, 12].forEach((d, i) => this.note(d + 2, { kind: i % 2 ? 'crystal' : 'bell', vel: 0.3, pan: (i - 2.5) * 0.2, delay: i * 0.06 }));
+    this.breath(0.6, 1400); this.swell(0.9, 4);
+  }
+
   levelUp() {
     [0, 4, 7, 9, 12, 14].forEach((d, i) => this.note(d + 3, { kind: 'bell', vel: 0.36, pan: (i - 2.5) * 0.25, delay: i * 0.12 }));
     this.swell(1, 6);

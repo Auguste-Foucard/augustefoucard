@@ -10,7 +10,9 @@
 html, body { margin: 0; height: 100%; background: #06060f; color: var(--ink); font-family: var(--font); overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 canvas#c { position: fixed; inset: 0; display: block; touch-action: none; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
-#ui { position: fixed; inset: 0; pointer-events: none; }
+#ui { position: fixed; inset: 0; pointer-events: none; z-index: 6; transition: opacity 0.9s ease; }
+body.entering #ui { opacity: 0; }
+body.entering #ui * { pointer-events: none !important; }
 #ui > .exit, #ui > .sheet-wrap { pointer-events: auto; }
 
 /* HUD */
@@ -136,3 +138,8 @@ body[data-mode="free"] .toasts { display: none; }
 /* Mise à jour : fondu doux avant rechargement */
 body.leaving canvas#c, body.leaving #ui { opacity: 0; transition: opacity 0.8s ease; }
 .note.ver { opacity: 0.5; font-size: 11px; margin-top: 10px; }
+
+/* Bulle de relais : visible entre l'écran de démarrage de l'iPhone et la première image animée. */
+#boot { position: fixed; inset: 0; z-index: 4; background: radial-gradient(circle at 50% 50%, rgba(40, 24, 90, 0.55), rgba(0, 0, 0, 0) 70vmax), linear-gradient(#07061a, #0b0919); pointer-events: none; }
+#boot::after { content: ""; position: absolute; left: 50%; top: 50%; width: 100vmin; height: 100vmin; transform: translate(-50%, -50%);
+  background: url("splash/boot.jpg") center / cover no-repeat; -webkit-mask-image: radial-gradient(circle, #000 55%, transparent 71%); mask-image: radial-gradient(circle, #000 55%, transparent 71%); }
