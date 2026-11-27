@@ -1,6 +1,8 @@
 // Pouvoirs sensoriels : chacun change la façon de toucher la lumière.
 import { TAU, rand, clamp, dist, smooth } from './util.js';
-import { hue, glow, burst, ribbon, sat } from './fx.js';
+import { hue, hueAt, glow, burst, ribbon, sat, palette } from './fx.js';
+import { noise2 } from './util.js';
+import { gainMult } from './economy.js';
 import { audio } from './audio.js';
 
 // ---------- Feux d'artifice : accumuler puis libérer ----------
@@ -68,44 +70,80 @@ export class Ripples {
 }
 
 // ---------- Magnétisme : sable cosmique ----------
+// Garder le doigt posé rassemble le sable en tourbillon (la gamme monte) ; le relâcher le fait éclater en gerbe.
 export class Sand {
-  constructor(G) { this.G = G; this.n = 0; this.cap = 3200; const F = () => new Float32Array(this.cap); this.x = F(); this.y = F(); this.vx = F(); this.vy = F(); this.h = F(); this.b = F(); this.active = false; this.fade = 0; }
+  constructor(G) {
+    this.G = G; this.n = 0; this.cap = 4200; const F = () => new Float32Array(this.cap);
+    this.x = F(); this.y = F(); this.vx = F(); this.vy = F(); this.pos = F(); this.b = F();
+    this.active = false; this.fade = 0; this.gathered = 0; this.step = 0; this.holding = null;
+  }
   ensure() {
-    const G = this.G; const want = Math.round(clamp(900 * G.pm, 500, this.cap));
-    while (this.n < want) { const i = this.n++; this.x[i] = rand(G.W); this.y[i] = rand(G.H); this.vx[i] = 0; this.vy[i] = 0; this.h[i] = hue(Math.random()); this.b[i] = 0; }
+    const G = this.G; const want = Math.round(clamp(1100 * G.pm, 600, this.cap));
+    while (this.n < want) { const i = this.n++; this.x[i] = rand(G.W); this.y[i] = rand(G.H); this.vx[i] = 0; this.vy[i] = 0; this.pos[i] = Math.random(); this.b[i] = 0; }
     this.n = Math.min(this.n, want);
+  }
+  /** Début d'une prise : la voix cristalline s'allume. */
+  press(p) { this.holding = p.id; this.step = 0; this.gathered = 0; audio.voiceStart(audio.snap(4 + Math.round((1 - p.y / this.G.H) * 4))); this.G.haptic('soft'); }
+  /** Relâchement : tout ce qui a été rassemblé éclate en gerbe colorée. */
+  release(p) {
+    const G = this.G; if (this.holding !== p.id) return; this.holding = null; audio.voiceStop();
+    const g = this.gathered; this.gathered = 0; if (g < 25) return;
+    const R = 170, bm = G.burstMult, k = Math.min(1, g / 500);
+    for (let i = 0; i < this.n; i++) {
+      const dx = this.x[i] - p.x, dy = this.y[i] - p.y; const d = Math.hypot(dx, dy); if (d > R) continue;
+      const v = (200 + 360 * Math.random()) * (0.85 + 0.25 * bm) * (0.7 + 0.5 * k) * (1 - d / R * 0.5); const a = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.5;
+      this.vx[i] = Math.cos(a) * v; this.vy[i] = Math.sin(a) * v; this.b[i] = 1;
+    }
+    burst(G.P, p.x, p.y, { n: Math.round((30 + 70 * k) * G.pm), speed: (140 + 150 * k) * (0.85 + 0.25 * bm), life: 2.2, s: 4, k: 1, hd: 50, ring: G.bloom >= 1 });
+    if (G.bloom >= 2) setTimeout(() => { for (let j = 0; j < G.bloom; j++) { const a = rand(TAU), r = rand(80, 170) * bm; burst(G.P, p.x + Math.cos(a) * r, p.y + Math.sin(a) * r, { n: Math.round(14 * G.pm), speed: 70, life: 1.5, s: 3, k: 0 }); } }, 380);
+    const notes = 3 + Math.round(k * 4); const base = audio.snap(4 + Math.round((1 - p.y / G.H) * 4));
+    for (let j = 0; j < notes; j++) audio.noteOnGrid(base + [0, 2, 4, 5, 7, 9, 12][j], { kind: j === notes - 1 ? 'bell' : 'keys', vel: 0.42, pan: (p.x / G.W) * 2 - 1, delay: j * 0.07, harm: false });
+    audio.swell(0.3 + 0.4 * k, 2.5); G.haptic(k > 0.5 ? 'strong' : 'soft');
+    G.earn((3 + Math.sqrt(g) * 1.2) * gainMult(G.state), p.x, p.y, 'magnet');
+    G.universe.deposit(p.x, p.y, hueAt(Math.random()), 0.6 + k);
   }
   update(dt, pointers) {
     const G = this.G; this.fade += ((this.active ? 1 : 0) - this.fade) * Math.min(1, dt * 2); if (this.fade < 0.01) return;
     this.ensure();
-    const repel = pointers.length >= 2; let energy = 0; const t = G.t;
+    const repel = pointers.length >= 2; const t = G.t; const decay = Math.exp(-dt * (1.1 / G.lifeMult)); const swirl = 0.45 + G.bloom * 0.05;
+    const hold = pointers.find((p) => p.id === this.holding); let near = 0;
     for (let i = 0; i < this.n; i++) {
-      let ax = Math.sin(this.y[i] * 0.01 + t * 0.3) * 6, ay = Math.cos(this.x[i] * 0.01 + t * 0.25) * 6;
+      const ang = noise2(this.x[i] * 0.004 + t * 0.05, this.y[i] * 0.004) * TAU * 2; let ax = Math.cos(ang) * 10, ay = Math.sin(ang) * 10;
       for (const p of pointers) {
-        const dx = p.x - this.x[i], dy = p.y - this.y[i]; const d2 = dx * dx + dy * dy; const R = repel ? 160 : 260; if (d2 > R * R) continue;
-        const d = Math.sqrt(d2) + 8; const f = (1 - d / R) * (repel ? -1400 : 900);
-        ax += (dx / d) * f + (repel ? 0 : (-dy / d) * f * 0.8); ay += (dy / d) * f + (repel ? 0 : (dx / d) * f * 0.8);
-        this.b[i] = Math.min(1, this.b[i] + dt * 3);
+        const dx = p.x - this.x[i], dy = p.y - this.y[i]; const d2 = dx * dx + dy * dy; const R = repel ? 170 : 280; if (d2 > R * R) continue;
+        const d = Math.sqrt(d2) + 10; const f = (repel ? -1500 : 1100) * (repel ? 1 - d / R : 0.35 + 0.65 * (1 - d / R));
+        ax += (dx / d) * f + (repel ? 0 : (-dy / d) * f * swirl); ay += (dy / d) * f + (repel ? 0 : (dx / d) * f * swirl);
+        this.b[i] = Math.min(1, this.b[i] + dt * 2.5);
+        if (hold && p === hold && d < 130) near++;
       }
-      const dr = Math.exp(-2.2 * dt); this.vx[i] = (this.vx[i] + ax * dt) * dr; this.vy[i] = (this.vy[i] + ay * dt) * dr;
-      this.x[i] += this.vx[i] * dt; this.y[i] += this.vy[i] * dt; this.b[i] *= Math.exp(-dt * 0.9);
+      const dr = Math.exp(-2.1 * dt); this.vx[i] = (this.vx[i] + ax * dt) * dr; this.vy[i] = (this.vy[i] + ay * dt) * dr;
+      this.x[i] += this.vx[i] * dt; this.y[i] += this.vy[i] * dt; this.b[i] *= decay;
       if (this.x[i] < -10) this.x[i] = G.W + 10; else if (this.x[i] > G.W + 10) this.x[i] = -10;
       if (this.y[i] < -10) this.y[i] = G.H + 10; else if (this.y[i] > G.H + 10) this.y[i] = -10;
-      energy += Math.abs(this.vx[i]) + Math.abs(this.vy[i]);
     }
-    if (pointers.length && this.active) {
-      const e = energy / this.n; G.earn(e * 0.0009 * dt * 60 * (this.n / 900), 0, 0, 'magnet', true);
-      this._snd = (this._snd || 0) + dt; if (this._snd > 0.5) { this._snd = 0; audio.breath(Math.min(1, e / 200), repel ? 900 : 2200); if (Math.random() < 0.5) audio.note(8 + ((pointers[0].y < G.H / 2) ? 5 : 0) + ((Math.random() * 4) | 0), { kind: 'glass', vel: 0.18 }); }
+    if (hold && this.active) {
+      this.gathered += (near - this.gathered) * Math.min(1, dt * 3);
+      // Chaque palier rassemblé fait monter la gamme d'une note.
+      const lvl = Math.floor(this.gathered / 70);
+      if (lvl > this.step) { this.step = lvl; const d = audio.snap(5 + lvl * 2); audio.noteOnGrid(d, { kind: 'glass', vel: 0.3, harm: false }); audio.voiceTo(d, audio.ctx ? audio.ctx.currentTime : 0); G.haptic('tick'); }
+      audio.voiceSpeed(0.2 + Math.min(1.2, this.gathered / 300));
+      G.earn(Math.sqrt(this.gathered) * 0.12 * dt * gainMult(G.state), 0, 0, 'magnet', true);
     }
   }
   draw(ctx) {
-    if (this.fade < 0.01) return; const S = sat(); const buckets = new Map();
-    for (let i = 0; i < this.n; i++) { const key = ((this.h[i] / 30) | 0) * 3 + Math.min(2, (this.b[i] * 3) | 0); let b = buckets.get(key); if (!b) buckets.set(key, (b = [])); b.push(i); }
-    for (const [key, list] of buckets) {
-      const h = ((key / 3) | 0) * 30, lv = key % 3; ctx.globalAlpha = (0.35 + lv * 0.25) * this.fade * this.G.intensity; ctx.fillStyle = `hsl(${h},${S}%,${70 + lv * 8}%)`; ctx.beginPath();
-      const sz = 1.3 + lv * 0.6; for (const i of list) ctx.rect(this.x[i] - sz / 2, this.y[i] - sz / 2, sz, sz); ctx.fill();
+    if (this.fade < 0.01) return; const G = this.G; const S = sat(); const trailK = 0.018 * G.trailMult; const width = 0.75 + 0.25 * (palette.spread - 0.38) / 0.62;
+    const pts = new Map(), lines = new Map();
+    for (let i = 0; i < this.n; i++) {
+      const sp = Math.abs(this.vx[i]) + Math.abs(this.vy[i]); const lv = Math.min(2, (this.b[i] * 2.2 + sp / 260) | 0);
+      const h = hueAt(this.pos[i] * width + Math.min(0.25, sp / 2400)); const key = ((h / 15) | 0) * 3 + lv;
+      const m = sp > 90 ? lines : pts; let b = m.get(key); if (!b) m.set(key, (b = [])); b.push(i);
     }
-    ctx.globalAlpha = 1;
+    const prevOp = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'source-over'; ctx.lineCap = 'round';
+    for (const [key, list] of lines) { const h = ((key / 3) | 0) * 15, lv = key % 3; ctx.globalAlpha = (0.45 + lv * 0.2) * this.fade * G.intensity; ctx.strokeStyle = `hsl(${h},${S}%,${60 + lv * 7}%)`; ctx.lineWidth = 1.1 + lv * 0.5; ctx.beginPath(); for (const i of list) { const sp = Math.abs(this.vx[i]) + Math.abs(this.vy[i]); const c = trailK * Math.min(1, 520 / sp); ctx.moveTo(this.x[i], this.y[i]); ctx.lineTo(this.x[i] - this.vx[i] * c, this.y[i] - this.vy[i] * c); } ctx.stroke(); }
+    for (const [key, list] of pts) { const h = ((key / 3) | 0) * 15, lv = key % 3; ctx.globalAlpha = (0.45 + lv * 0.2) * this.fade * G.intensity; ctx.fillStyle = `hsl(${h},${S}%,${60 + lv * 8}%)`; ctx.beginPath(); const sz = 1.4 + lv * 0.7; for (const i of list) ctx.rect(this.x[i] - sz / 2, this.y[i] - sz / 2, sz, sz); ctx.fill(); }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = prevOp;
+    // Cœur du tourbillon sous le doigt : il grossit à mesure qu'on rassemble.
+    if (this.holding !== null && this.gathered > 5) { const p = [...this.G._ptrs()].find((q) => q.id === this.holding); if (p) { const k = Math.min(1, this.gathered / 500); glow(ctx, p.x, p.y, 40 + 90 * k, hueAt(G.t * 0.05), 0.25 + 0.35 * k); glow(ctx, p.x, p.y, 12 + 14 * k, hueAt(G.t * 0.05 + 0.3), 0.6 + 0.3 * k); } }
   }
 }
 
