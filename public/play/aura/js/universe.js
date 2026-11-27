@@ -99,8 +99,9 @@ export class Universe {
     // Constellations.
     ctx.lineWidth = 0.8;
     for (const c of u.constellations) {
-      ctx.globalAlpha = (c.k ? 0.3 : 0.16) * I; ctx.strokeStyle = `hsl(${c.h},${sat()}%,80%)`; ctx.beginPath(); if (c.e) for (const [a, b] of c.e) { ctx.moveTo(c.n[a][0] * W, c.n[a][1] * H); ctx.lineTo(c.n[b][0] * W, c.n[b][1] * H); } else c.n.forEach(([x, y], i) => (i ? ctx.lineTo(x * W, y * H) : ctx.moveTo(x * W, y * H))); ctx.stroke();
-      c.n.forEach(([x, y], i) => glow(ctx, x * W, y * H, 7, c.h + i * 15, (0.4 + 0.25 * Math.sin(t * 1.5 + i)) * I));
+      // Discrètes : on devine la figure plus qu'on ne la voit (un léger reflet passe de temps en temps).
+      const ci = u.constellations.indexOf(c); ctx.globalAlpha = (c.k ? 0.045 + 0.05 * Math.max(0, Math.sin(t * 0.12 + ci * 1.7)) ** 4 : 0.07) * I; ctx.strokeStyle = `hsl(${c.h},${sat()}%,80%)`; ctx.beginPath(); if (c.e) for (const [a, b] of c.e) { ctx.moveTo(c.n[a][0] * W, c.n[a][1] * H); ctx.lineTo(c.n[b][0] * W, c.n[b][1] * H); } else c.n.forEach(([x, y], i) => (i ? ctx.lineTo(x * W, y * H) : ctx.moveTo(x * W, y * H))); ctx.stroke();
+      c.n.forEach(([x, y], i) => glow(ctx, x * W, y * H, 4.5, c.h + i * 15, (0.22 + 0.12 * Math.sin(t * 1.3 + i * 2.1)) * I));
     }
     // Boucles éternelles.
     for (const l of u.loops) {
