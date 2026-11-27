@@ -9,18 +9,26 @@ export const PALETTES = {
   ember: { stops: [345, 10, 25, 40, 30, 15, 345], sat: 80, name: { fr: 'Braise douce', en: 'Soft ember' } },
   moon: { stops: [220, 245, 270, 290, 250, 220], sat: 38, name: { fr: 'Lune', en: 'Moon' } },
 };
+// Teintes du sommeil : ambres et roses très doux, sans bleu (moins stimulant le soir).
+const SLEEP = { stops: [8, 20, 32, 40, 26, 350, 8], sat: 70 };
 
 export const palette = { id: 'aurora', spread: 0.15, base: 0, night: false };
-export function setPalette(id, colorsLvl, night) {
-  palette.id = PALETTES[id] ? id : 'aurora'; palette.night = night;
-  palette.spread = 0.1 + (colorsLvl / 8) * 0.9;
+export function setPalette(id, colorsLvl, night, sleeping = false) {
+  palette.id = PALETTES[id] ? id : 'aurora'; palette.night = night; palette.sleeping = sleeping;
+  palette.spread = 0.38 + (colorsLvl / 8) * 0.62; // variée dès le début, arc-en-ciel complet avec le Prisme
   buildSprites();
 }
-const P = () => PALETTES[palette.night ? 'ember' : palette.id];
+const P = () => (palette.sleeping ? SLEEP : PALETTES[palette.night ? 'ember' : palette.id]);
 /** Teinte pour une position t (0..1) dans le geste ; la base dérive lentement avec le temps. */
 export function hue(t = Math.random()) {
   const st = P().stops; const pos = ((palette.base + (t - 0.5) * palette.spread) % 1 + 1) % 1;
   const k = pos * (st.length - 1); const i = Math.floor(k); const f = k - i;
+  let a = st[i], b = st[Math.min(st.length - 1, i + 1)]; let d = b - a; if (d > 180) d -= 360; if (d < -180) d += 360;
+  return hueWrap(a + d * f);
+}
+/** Teinte à une position absolue de la palette (0..1), qui dérive lentement : chaque geste peut avoir sa couleur. */
+export function hueAt(pos) {
+  const st = P().stops; const q = ((pos + palette.base) % 1 + 1) % 1; const k = q * (st.length - 1); const i = Math.floor(k); const f = k - i;
   let a = st[i], b = st[Math.min(st.length - 1, i + 1)]; let d = b - a; if (d > 180) d -= 360; if (d < -180) d += 360;
   return hueWrap(a + d * f);
 }

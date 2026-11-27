@@ -76,11 +76,11 @@ function wobblePath(q, cx, cy, r, amp, t) {
  */
 export function playIntro({ reduced = false, quick = false, still = false, onEnter, onDone } = {}) {
   const cv = document.createElement('canvas'); cv.id = 'entry'; cv.setAttribute('aria-hidden', 'true');
-  cv.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;z-index:5;pointer-events:none;transition:opacity .45s ease';
+  cv.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100lvh;height:var(--vh,100lvh);z-index:5;pointer-events:none;transition:opacity .45s ease';
   document.body.appendChild(cv); document.body.classList.add('entering');
   const game = document.getElementById('c');
   const q = cv.getContext('2d'); let W = 0, H = 0, dpr = 1;
-  const size = () => { dpr = still ? devicePixelRatio || 1 : Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); };
+  const size = () => { dpr = still ? devicePixelRatio || 1 : Math.min(devicePixelRatio || 1, 2); const r = cv.getBoundingClientRect(); W = Math.round(r.width) || innerWidth; H = Math.round(r.height) || innerHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); };
   size(); addEventListener('resize', size);
   const stars = Array.from({ length: 150 }, () => ({ a: rand(TAU), d: rand(0.05, 1), s: rand(0.6, 1.8), h: HOLO[(Math.random() * 8) | 0] }));
   const drops = []; let popAt = null;
