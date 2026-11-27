@@ -8,7 +8,7 @@ export function GlobalFireworks() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current;
-    if (!c || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!c) return;
     const fw = new Fireworks(c);
     const tap = (e: Event) => {
       const d = (e as CustomEvent).detail as { x: number; y: number; strong: boolean };

@@ -41,7 +41,8 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const NS = 'http://www.w3.org/2000/svg';
     const svg = el.querySelector<SVGSVGElement>('.cons')!;
-    const fw = fwc.current && !still ? new Fireworks(fwc.current) : null;
+    // les interactions restent actives même avec « réduire les animations » : elles ne se déclenchent qu'au geste
+    const fw = fwc.current ? new Fireworks(fwc.current) : null;
     let hue = 42; // le trait commence doré puis change de couleur au fil du geste
     const col = (h: number, l = 78) => `hsl(${Math.round(h) % 360} 92% ${l}%)`;
     const at = (s: HTMLElement) => { const [sx, sy] = toPx(s); return fw ? fw.local(sx, sy) : [0, 0] as const; };
@@ -119,7 +120,8 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
       j.innerHTML = '<span class="jewel__n"><i class="jewel__glow"></i><i class="jewel__spk"></i><i class="jewel__spk jewel__spk--d"></i><i class="jewel__core"></i></span>';
       const bloom = () => { el.appendChild(j); chime(y / 100, x / 100, 0.7); haptic(10); window.setTimeout(() => j.remove(), 12000); };
       haptic(4);
-      if (fw) { const [lx, ly] = fw.local(cx, cy); fw.rocket(lx, ly, randomType(), Math.random() * 360, 1.1, bloom); } else bloom();
+      if (fw && !still) { const [lx, ly] = fw.local(cx, cy); fw.rocket(lx, ly, randomType(), Math.random() * 360, 1.1, bloom); }
+      else { if (fw) { const [lx, ly] = fw.local(cx, cy); fw.burst(lx, ly, randomType(), Math.random() * 360, 1); } bloom(); }
     };
 
     const down = (e: PointerEvent) => {
@@ -128,8 +130,8 @@ export function StarScene({ W, narrow }: { W: number; narrow: boolean }) {
       if (e.clientY > rect.bottom - rect.height * 0.04 || e.clientY < rect.top) return;
       if ((e.target as Element | null)?.closest?.('a, button, input, textarea, select, label, [role="button"], .header, .menu, .dock')) return;
       const s = hit(e.clientX, e.clientY, e.pointerType === 'mouse' ? 30 : 44);
-      if (s) { ring(s); if (!still) begin(s, e.clientX, e.clientY); return; }
-      if (!still) tap = { x: e.clientX, y: e.clientY, t: performance.now() };
+      if (s) { ring(s); begin(s, e.clientX, e.clientY); return; }
+      tap = { x: e.clientX, y: e.clientY, t: performance.now() };
     };
     const move = (e: PointerEvent) => {
       px = e.clientX; py = e.clientY; wake();
