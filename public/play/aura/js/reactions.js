@@ -14,7 +14,8 @@ export function findReaction(G, c) {
     const parts = [c]; let ok = true;
     for (const [type, cnt] of Object.entries(combo.need)) {
       const have = type === c.type ? 1 : 0; const need = cnt - have; if (need <= 0) continue;
-      const cands = alive.filter((o) => o.type === type && !parts.includes(o) && (cnt >= 3 || near(o)));
+      const pool = cnt >= 3 ? alive.concat((G.gone || []).filter((o) => !o.reacted && G.t - o.born < Math.max(20, G.reactWindow * 2.2))) : alive;
+      const cands = pool.filter((o) => o.type === type && !parts.includes(o) && (cnt >= 3 || near(o)));
       if (combo.cross) {
         const target = type === 'line' ? null : cands.find((o) => crosses(c, o));
         const lineFirst = type === 'line' ? cands.find((o) => crosses(o, c)) : null;

@@ -449,6 +449,9 @@ function tick(now) {
   for (const p of ptrs.values()) { if (p.charge) p.charge.update(dt); if (p.power === 'filaments' || p.power === 'kaleido') G.attract(p.x, p.y, 120, -40, 0.8); }
   sand.active = state.power === 'magnet' && G.mode !== 'breathe'; sand.update(dt, [...ptrs.values()].filter((p) => p.power === 'magnet'));
   for (const list of [G.creations, G.effects, G.filaments]) { for (const o of list) o.update(dt); }
+  // Les formes qui viennent de s'éteindre comptent encore un moment pour les harmonies à 3 formes
+  // (dessiner 3 fleurs prend du temps).
+  if (G.creations.some((o) => o.dead)) G.gone = [...(G.gone || []).filter((o) => G.t - o.born < 30), ...G.creations.filter((o) => o.dead && !o.reacted)].slice(-24);
   G.creations = G.creations.filter((o) => !o.dead);
   { const load = G.creations.length + G.effects.length * 2 + G.filaments.length * 0.5 + G.P.n / 600; G.lod = clamp(1.25 - load * 0.05, 0.4, 1); G.pm = G.pmBase * G.lod; }
   if (G.filaments.length > 14) { const old = G.filaments.find((f) => f.life > G.t - f.born + 0.6); if (old) old.life = G.t - old.born + 0.6; }

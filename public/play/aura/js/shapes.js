@@ -51,7 +51,12 @@ export function analyze(raw) {
 
   // Rotation totale signée et absolue.
   const th = []; for (let i = 0; i < N - 1; i++) th.push(ang(p[i], p[i + 1]));
-  let total = 0, abs = 0; for (let i = 0; i < th.length - 1; i++) { const d = wrapAngle(th[i + 1] - th[i]); total += d; abs += Math.abs(d); }
+  let total = 0, abs = 0; const turnsAt = [];
+  for (let i = 0; i < th.length - 1; i++) { const d = wrapAngle(th[i + 1] - th[i]); total += d; abs += Math.abs(d); turnsAt.push(Math.abs(d)); }
+  // Concentration de la rotation : forte pour une étoile (tout tourne aux pointes, traits droits),
+  // faible pour une fleur (ça tourne partout, pétales arrondis).
+  const conc = abs > 0 ? [...turnsAt].sort((a, b) => b - a).slice(0, Math.round(turnsAt.length * 0.25)).reduce((a, b) => a + b, 0) / abs : 0;
+  info.conc = conc;
   info.total = total; info.abs = abs; info.dir = Math.sign(total) || 1;
 
   if (straight > 0.8 || (straight > 0.7 && abs < 1.2)) return { type: 'line', info: { ...info, pts: p } };
@@ -68,7 +73,14 @@ export function analyze(raw) {
   // Étoile tracée d'un seul trait (pentagramme) : deux tours, des traits qui se croisent plusieurs fois
   // et un rayon qui varie beaucoup. Reconnue même aux pointes arrondies et pas tout à fait refermée.
   const mrs = rs.reduce((a, b) => a + b, 0) / N; const cvs = Math.sqrt(rs.reduce((a, b) => a + (b - mrs) ** 2, 0) / N) / mrs;
-  if (Math.abs(total) > 2.7 * Math.PI && Math.abs(total) < 5.6 * Math.PI && cvs > 0.16 && crossings(p) >= 3) {
+  const xs = []; const nx = Math.abs(total) > 2.7 * Math.PI && cvs > 0.16 ? crossings(p, xs) : 0;
+  // Rosace : les pétales se croisent tous au cœur (une étoile se croise loin du centre).
+  if (nx >= 3) { const xr = xs.map((q) => Math.hypot(q.x - gx, q.y - gy)).sort((a, b) => a - b); if (xr[xr.length >> 1] < mrs * 0.22) return { type: 'flower', info: { ...info, pts: p, cx: gx, cy: gy, r: mrs, petals: Math.max(4, Math.min(9, nx + 1)) } }; }
+  // Fleur en boucles (chaque pétale est une petite boucle) : beaucoup de tours, des croisements, des courbes.
+  if (nx >= 3 && conc < 0.62 && (Math.abs(total) >= 5.6 * Math.PI || conc < 0.55)) {
+    return { type: 'flower', info: { ...info, pts: p, cx: gx, cy: gy, r: mrs, petals: Math.max(4, Math.min(9, Math.round(Math.abs(total) / TAU) - 1)) } };
+  }
+  if (Math.abs(total) > 2.7 * Math.PI && Math.abs(total) < 5.6 * Math.PI && nx >= 3 && conc >= 0.62) {
     // Pointes : maxima du rayon, une seule par endroit (le départ et l'arrivée sont la même pointe).
     const tips = [];
     for (let i = 0; i < N; i++) {
@@ -123,7 +135,7 @@ export function analyze(raw) {
     Object.assign(info, { curvy, segStraight, pts: q, cx, cy, r: mr, cv, lobes, convex, concave, sharp, concaveTurn, closed: true });
 
     const starry = (Math.abs(total) > 3.2 * Math.PI && convex >= 4) || (convex >= 4 && concave >= 2) || (convex >= 5 && lobes >= 5) || (convex >= 3 && concave >= 3);
-    if (starry && segStraight > 0.86) return { type: 'star', info };
+    if (starry && segStraight > 0.86 && conc > 0.57) return { type: 'star', info };
     if (starry && lobes >= 3) return { type: 'flower', info: { ...info, petals: Math.max(4, Math.min(9, lobes)) } };
     if ((lobes >= 4 && convex <= 3) || (abs > 5 * Math.PI && lobes >= 3) || (lobes >= 3 && sharp.length >= 3 && Math.abs(total) > 2.8 * Math.PI && segStraight <= 0.86)) return { type: 'flower', info: { ...info, petals: Math.max(4, Math.min(9, lobes)) } };
     if ((concave >= 1 || concaveTurn > 0.9) && lobes >= 2 && lobes <= 3 && convex <= 2) return { type: 'heart', info };
@@ -145,7 +157,7 @@ export function analyze(raw) {
 }
 
 /** Nombre de fois où le tracé se recoupe (segments non voisins). */
-function crossings(p) {
+function crossings(p, at = null) {
   let c = 0; const n = p.length;
   for (let i = 0; i < n - 1; i++) for (let j = i + 3; j < n - 1; j++) {
     const a = p[i], b = p[i + 1], d = p[j], e = p[j + 1];
@@ -154,7 +166,7 @@ function crossings(p) {
     if (d1 * d2 < 0 && d3 * d4 < 0) {
       // Seuls les vrais croisements comptent (pas un trait repassé presque parallèle).
       const u = Math.abs(wrapAngle(ang(a, b) - ang(d, e))); const x = Math.min(u, Math.PI - u);
-      if (x > 0.45) { c++; j += 2; }
+      if (x > 0.45) { c++; j += 2; if (at) { const k = d1 / (d1 - d2); at.push({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k }); } }
     }
   }
   return c;
