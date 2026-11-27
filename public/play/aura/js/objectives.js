@@ -33,7 +33,7 @@ export const OBJECTIVES = [
   PW('kaleido', 'Essaie le Kaléidoscope', 'Try the Kaleidoscope'),
   F('flower', 1, 'Dessine une fleur', 'Draw a flower'),
   SK('phare'),
-  X('breathe', 1, (s) => s.stats.breaths || 0, 'Fais un exercice de respiration', 'Do a breathing exercise', 'calm', true, { fr: 'Touche ici pour ouvrir Sérénité', en: 'Tap here to open Serenity' }),
+  X('garden', 1, (s) => s.combos.garden || 0, 'Dessine 3 fleurs à la suite', 'Draw 3 flowers in a row', null, true, { fr: 'Vite, l’une à côté de l’autre', en: 'Quickly, next to each other' }),
   SK('cle'),
   F('heart', 1, 'Dessine un cœur', 'Draw a heart'),
   SK('arbre'),
@@ -50,7 +50,7 @@ export const OBJECTIVES = [
 export function objPower(o) {
   if (o.kind === 'power') return o.id;
   if (o.kind === 'form') return o.type === 'mandala' ? 'kaleido' : 'filaments';
-  if (o.kind === 'combo' || o.kind === 'cosmic') return 'filaments';
+  if (o.kind === 'combo' || o.kind === 'cosmic' || o.kind === 'garden') return 'filaments';
   return null;
 }
 /** Objectif en cours (ou null quand tout est accompli). */

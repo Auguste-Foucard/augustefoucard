@@ -193,7 +193,7 @@ function checkSky(dt) {
 }
 
 // ---------- Le fil des objectifs ----------
-const objLevel = (o) => o.kind === 'form' ? FORM[o.type]?.level ?? 1 : o.kind === 'power' ? POWER[o.id]?.level ?? 1 : o.kind === 'sky' ? SKY.find((c) => c.id === o.id).gate : o.kind === 'cosmic' ? FORM.star.level : o.kind === 'dawn' ? DAWN_LEVEL : o.kind === 'level' ? 1 : 1;
+const objLevel = (o) => o.kind === 'form' ? FORM[o.type]?.level ?? 1 : o.kind === 'power' ? POWER[o.id]?.level ?? 1 : o.kind === 'sky' ? SKY.find((c) => c.id === o.id).gate : o.kind === 'cosmic' ? FORM.star.level : o.kind === 'garden' ? FORM.flower.level : o.kind === 'dawn' ? DAWN_LEVEL : o.kind === 'level' ? 1 : 1;
 function objectiveInfo() {
   const cur = currentObjective(state); if (!cur) return null;
   const need = objLevel(cur.o); const info = { ...cur, need, locked: state.level < need };
@@ -232,7 +232,7 @@ function guideObjective(info) {
   showDemo(info.o, 900); objMiss = 0;
 }
 /** La forme à montrer pour l'objectif (le geste à reproduire). */
-const demoType = (o) => (o.kind === 'form' && o.type !== 'line' && o.type !== 'mandala' ? o.type : o.kind === 'cosmic' ? 'star' : o.kind === 'combo' ? 'circle' : null);
+const demoType = (o) => (o.kind === 'form' && o.type !== 'line' && o.type !== 'mandala' ? o.type : o.kind === 'cosmic' ? 'star' : o.kind === 'combo' ? 'circle' : o.kind === 'garden' ? 'flower' : null);
 let objMiss = 0;
 function showDemo(o, delay = 0) { const d = demoType(o); if (d) setTimeout(() => { if (G.mode === 'play') G.effects.push(new Ghost(G, d)); }, delay); }
 /** Après deux essais ratés sur un objectif de forme, on remontre le geste. */
