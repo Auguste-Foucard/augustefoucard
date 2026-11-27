@@ -2,7 +2,7 @@
 import { TAU, clamp, rand, smooth, easeOut, dist } from './util.js';
 import { Particles, setPalette, palette, hue, hueAt, glow, ribbon, burst } from './fx.js';
 import { analyze, glyph } from './shapes.js';
-import { Creation, Filament, Ghost } from './creations.js';
+import { Creation, Filament, Ghost, symAlpha } from './creations.js';
 import { findReaction, Reaction } from './reactions.js';
 import { Universe } from './universe.js';
 import { Charge, Ripples, Sand } from './powers.js';
@@ -453,10 +453,15 @@ function tick(now) {
   // (dessiner 3 fleurs prend du temps).
   if (G.creations.some((o) => o.dead)) G.gone = [...(G.gone || []).filter((o) => G.t - o.born < 30), ...G.creations.filter((o) => o.dead && !o.reacted)].slice(-24);
   G.creations = G.creations.filter((o) => !o.dead);
-  { const load = G.creations.length + G.effects.length * 2 + G.filaments.length * 0.5 + G.P.n / 600; G.lod = clamp(1.25 - load * 0.05, 0.4, 1); G.pm = G.pmBase * G.lod; }
+  // Une forme en Kaléidoscope compte pour ses copies (lumière et calcul).
+  let crW = 0, flW = 0, kalCr = 0, kalFl = 0; for (const c of G.creations) { crW += c.sym ? 1 + c.sym * 0.35 : 1; if (c.sym) kalCr++; } for (const f of G.filaments) { flW += f.sym ? 0.4 + f.sym * 0.15 : 0.4; if (f.sym) kalFl++; }
+  // Pas plus de quelques formes en Kaléidoscope à la fois : les plus anciennes s'effacent plus tôt.
+  if (kalCr > 4) { const old = G.creations.find((c) => c.sym && !c.reacted && c.life > c.age + 0.8); if (old) old.life = old.age + 0.8; }
+  if (kalFl > 5) { const old = G.filaments.find((f) => f.sym && f.life > G.t - f.born + 0.5); if (old) old.life = G.t - old.born + 0.5; }
+  { const load = crW + G.effects.length * 2 + flW * 1.25 + G.P.n / 600; G.lod = clamp(1.25 - load * 0.05, 0.4, 1); G.pm = G.pmBase * G.lod; }
   if (G.filaments.length > 14) { const old = G.filaments.find((f) => f.life > G.t - f.born + 0.6); if (old) old.life = G.t - old.born + 0.6; }
   // Exposition automatique : beaucoup de lumière superposée ne doit jamais éblouir.
-  const live = G.creations.length + G.effects.length * 2 + G.filaments.length * 0.4 + G.P.n / 300; G.exposure += (clamp(1.5 / Math.sqrt(Math.max(1, live / 3)), 0.4, 1) * (sleep ? 0.45 : 1) - G.exposure) * Math.min(1, dt * 2);
+  const live = crW + G.effects.length * 2 + flW + G.P.n / 300; G.exposure += (clamp(1.5 / Math.sqrt(Math.max(1, live / 3)), 0.3, 1) * (sleep ? 0.45 : 1) - G.exposure) * Math.min(1, dt * 2);
   if (G.creations.length > 12) { const old = G.creations.find((c) => !c.reacted && c.life > c.age + 1); if (old) old.life = old.age + 1; } G.effects = G.effects.filter((o) => !o.dead); G.filaments = G.filaments.filter((o) => !o.dead);
   ripples.update(dt);
   checkQuests(dt); checkSky(dt); checkObjective(dt);
@@ -503,8 +508,9 @@ function drawLive() {
     const copies = p.power === 'kaleido' ? symCount() : 1; const c = kCenter();
     for (let k = 0; k < copies; k++) {
       if (k) { const half = k % 2 === 1; const ang = Math.floor(k / 2) * (TAU / (copies / 2)); ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0); ctx.translate(c.x, c.y); ctx.rotate(half ? -ang : ang); if (half) ctx.scale(1, -1); ctx.translate(-c.x, -c.y); }
-      ribbon(ctx, v, { width: 2.4, alpha: 1, t: G.t, strands: G.strands, glowK: 1 + G.state.up.gain * 0.04 });
-      glow(ctx, p.x, p.y, 22, p.h + G.t * 30, 0.7);
+      const ka = symAlpha(copies);
+      ribbon(ctx, v, { width: 2.4, alpha: ka, t: G.t, strands: copies > 1 ? 1 : G.strands, glowK: (1 + G.state.up.gain * 0.04) * (copies > 1 ? 0.5 : 1) });
+      glow(ctx, p.x, p.y, 22, p.h + G.t * 30, 0.7 * ka);
     }
     if (copies > 1) ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0);
   }
