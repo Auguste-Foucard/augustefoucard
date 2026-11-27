@@ -76,7 +76,7 @@ function wobblePath(q, cx, cy, r, amp, t) {
  */
 export function playIntro({ reduced = false, quick = false, still = false, onEnter, onDone } = {}) {
   const cv = document.createElement('canvas'); cv.id = 'entry'; cv.setAttribute('aria-hidden', 'true');
-  cv.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100lvh;height:var(--vh,100lvh);z-index:5;pointer-events:none;transition:opacity .45s ease';
+  cv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100vh;height:var(--vh,100vh);z-index:5;pointer-events:none;transition:opacity .45s ease';
   document.body.appendChild(cv); document.body.classList.add('entering');
   const game = document.getElementById('c');
   const q = cv.getContext('2d'); let W = 0, H = 0, dpr = 1;
