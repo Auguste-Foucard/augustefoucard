@@ -25,7 +25,7 @@ export class Charge {
     if (G.bloom >= 1 && L > 0.5) setTimeout(() => { for (let j = 0; j < 3 + G.bloom; j++) { const a = rand(TAU), r = rand(60, 160) * bm; burst(G.P, this.x + Math.cos(a) * r, this.y + Math.sin(a) * r, { n: Math.round(14 * G.pm), speed: 60, life: 1.4, s: 3, k: 0 }); } audio.note(17, { kind: 'glass', vel: 0.3 }); }, 650);
     const d = Math.round(L * 9) + 3; [0, 2, 4].forEach((k, i) => audio.note(d + k, { kind: 'bell', vel: 0.35 + L * 0.3, delay: i * 0.05, pan: (this.x / G.W) * 2 - 1 }));
     audio.swell(L * 0.4, 2.5); G.haptic(L > 0.6 ? 'strong' : 'soft');
-    G.earn(3 + Math.pow(L, 1.5) * 34, this.x, this.y, 'firework');
+    if (this.primary !== false) G.earn((3 + Math.pow(L, 1.5) * 34) * gainMult(G.state), this.x, this.y, 'firework');
     G.universe.deposit(this.x, this.y, this.h, L * 1.2);
     if (L > 0.85) G.universe.addStar(this.x, this.y, this.h, 0.7);
     this.dead = true;
@@ -36,22 +36,22 @@ export class Charge {
 // Toucher : une goutte. Garder le doigt : la goutte grossit, puis tombe en grande onde. Glisser : un sillage.
 export class Ripples {
   constructor(G) { this.G = G; this.list = []; this.sparkT = 0; this.holding = null; this.chainT = 0; }
-  press(p) { this.holding = { id: p.id, t0: this.G.t, x: p.x, y: p.y, h: hueAt(Math.random()) }; this.add(p.x, p.y, 0.45); }
+  press(p) { if (!p.primary) { this.add(p.x, p.y, 0.45, null, false, true); return; } this.holding = { id: p.id, t0: this.G.t, x: p.x, y: p.y, h: hueAt(Math.random()) }; this.add(p.x, p.y, 0.45); }
   follow(p) { if (this.holding && this.holding.id === p.id) { this.holding.x = p.x; this.holding.y = p.y; } }
   release(p) {
     const H = this.holding; if (!H || H.id !== p.id) return; this.holding = null;
     const k = clamp((this.G.t - H.t0 - 0.25) / 1.4, 0, 1); if (k > 0.05) { this.add(H.x, H.y, 0.6 + 1.6 * k, H.h); this.G.haptic(k > 0.6 ? 'strong' : 'soft'); }
   }
-  add(x, y, strong = 1, h = null, secondary = false) {
+  add(x, y, strong = 1, h = null, secondary = false, noEarn = false) {
     const G = this.G; if (this.list.length > 18) this.list.shift();
     const rings = Math.min(7, 3 + Math.floor(G.bloom / 2) + Math.round(strong));
-    this.list.push({ x, y, t: G.t, h: h ?? hueAt(Math.random()), s: strong, rings, sec: secondary,
+    this.list.push({ x, y, t: G.t, h: h ?? hueAt(Math.random()), s: strong, rings, sec: secondary, noEarn,
       speed: 105 * (0.9 + 0.08 * G.bursts) * (0.8 + 0.35 * Math.min(strong, 2)), life: 5 * (1 + (G.lifeMult - 1) * 0.4) * (0.75 + 0.3 * Math.min(strong, 2)) });
     if (!secondary) {
       const deg = Math.round((1 - y / G.H) * 9) + 3 - Math.round(strong * 1.5);
       audio.noteOnGrid(deg, { kind: 'drop', vel: 0.38 + 0.18 * Math.min(strong, 2), pan: (x / G.W) * 2 - 1, harm: false });
       if (strong > 1.1) audio.noteOnGrid(deg - 5, { kind: 'keys', vel: 0.3 + 0.12 * strong, pan: (x / G.W) * 2 - 1, harm: false });
-      G.earn((1 + strong * 1.6) * gainMult(G.state), x, y, 'water', strong < 1);
+      if (!noEarn) G.earn((1 + strong * 1.6) * gainMult(G.state), x, y, 'water', strong < 1);
     }
   }
   update(dt) {
@@ -70,7 +70,7 @@ export class Ripples {
       for (const sgn of [1, -1]) {
         const x = mx + (sgn * hh * (b.y - a.y)) / d, y = my - (sgn * hh * (b.x - a.x)) / d;
         if (Math.random() < 0.55 * G.pm) G.P.add(x, y, rand(-10, 10), rand(-28, -8), { life: rand(1, 1.8) * (0.8 + 0.2 * G.trailMult), s: 3 + fade * 3.5, h: hm + rand(-15, 15), grav: -10, tur: 6, a: 0.4 + 0.6 * fade, k: G.trails > 3 ? 1 : 0 });
-        gained += 0.03 * fade; if (!best || fade > best.f) best = { x, y, f: fade, h: hm };
+        if (!a.noEarn && !b.noEarn) gained += 0.03 * fade; if (!best || fade > best.f) best = { x, y, f: fade, h: hm };
       }
     }
     if (gained > 0) {
