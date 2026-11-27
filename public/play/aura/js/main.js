@@ -83,12 +83,13 @@ function viewport() {
 }
 function resize() {
   const { w: vw, h: vh } = viewport(); G.dpr = Math.min(devicePixelRatio || 1, G.quality < 0.6 ? 1.25 : 2);
-  document.documentElement.style.setProperty('--vh', vh + 'px');
+  document.documentElement.style.setProperty('--vh', vh + 'px'); scrollTo(0, 0);
   canvas.width = Math.round(vw * G.dpr); canvas.height = Math.round(vh * G.dpr); canvas.style.width = vw + 'px'; canvas.style.height = vh + 'px';
   G.W = vw; G.H = vh; G.universe.resize(vw, vh); refresh();
 }
 addEventListener('resize', resize); resize();
 addEventListener('orientationchange', () => setTimeout(resize, 350));
+addEventListener('scroll', () => { if (scrollY || scrollX) scrollTo(0, 0); }, { passive: true }); // la page ne doit jamais défiler
 window.visualViewport?.addEventListener('resize', resize);
 setTimeout(resize, 400); // iOS finit parfois de mesurer après le premier affichage
 
@@ -431,4 +432,4 @@ addEventListener('focus', () => checkUpdate());
 addEventListener('online', () => checkUpdate(true));
 setInterval(() => { if (!document.hidden) checkUpdate(); }, 10 * 60_000);
 setTimeout(() => checkUpdate(true), 4000);
-window.__aura = { G, version: VERSION, get state() { return state; }, get sleep() { return sleep; }, get breath() { return breath; } };
+window.__aura = { G, version: VERSION, screenInfo: () => `${innerWidth}×${innerHeight} · ${screen.width}×${screen.height} · ${G.W}×${G.H} · ${navigator.standalone ? 'app' : 'web'}`, get state() { return state; }, get sleep() { return sleep; }, get breath() { return breath; } };

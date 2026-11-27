@@ -8,13 +8,15 @@
 .night { --accent: #ffc9a8; --accent2: #ffb3c1; --ink: #f2e4dc; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html { background: #0a0720; }
-html, body { margin: 0; height: 100%; background: #0a0720; color: var(--ink); font-family: var(--font); overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+html, body { margin: 0; height: 100%; height: var(--vh, 100%); background: #0a0720; color: var(--ink); font-family: var(--font); overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 /* Plein écran réel sur tous les iPhone : la hauteur suit l'écran entier (barre d'accueil comprise),
    même quand iOS sous-estime la zone visible des apps installées. --vh est calculé en JS. */
-canvas#c { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100lvh; height: var(--vh, 100lvh); display: block; touch-action: none; }
-body::before { content: ""; position: fixed; left: 0; right: 0; top: 0; height: calc(var(--vh, 100lvh) + 200px); background: #0a0720; z-index: -1; }
+/* iOS coupe les éléments « fixés » à une hauteur trop courte dans les apps installées : tout est donc
+   placé dans la page elle-même (position absolue), à la hauteur réelle de l'écran, sans défilement. */
+body { position: relative; }
+canvas#c { position: absolute; top: 0; left: 0; width: 100%; height: 100vh; height: var(--vh, 100vh); display: block; touch-action: none; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
-#ui { position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100lvh; height: var(--vh, 100lvh); pointer-events: none; z-index: 6; transition: opacity 0.9s ease; }
+#ui { position: absolute; top: 0; left: 0; right: 0; height: 100vh; height: var(--vh, 100vh); pointer-events: none; z-index: 6; transition: opacity 0.9s ease; }
 body.entering #ui { opacity: 0; }
 body.entering #ui * { pointer-events: none !important; }
 #ui > .exit, #ui > .sheet-wrap { pointer-events: auto; }
@@ -147,7 +149,7 @@ body.leaving canvas#c, body.leaving #ui { opacity: 0; transition: opacity 0.8s e
 .note.ver { opacity: 0.5; font-size: 11px; margin-top: 10px; }
 
 /* Bulle de relais : visible entre l'écran de démarrage de l'iPhone et la première image animée. */
-#boot { position: fixed; top: 0; left: 0; right: 0; height: 100lvh; height: var(--vh, 100lvh); z-index: 4; background: radial-gradient(circle at 50% 50%, rgba(40, 24, 90, 0.3), rgba(0, 0, 0, 0) 70vmax), linear-gradient(#0a0720, #05040b); pointer-events: none; }
+#boot { position: absolute; top: 0; left: 0; right: 0; height: 100vh; height: var(--vh, 100vh); z-index: 4; background: radial-gradient(circle at 50% 50%, rgba(40, 24, 90, 0.3), rgba(0, 0, 0, 0) 70vmax), linear-gradient(#0a0720, #05040b); pointer-events: none; }
 #boot::after { content: ""; position: absolute; left: 50%; top: 50%; width: 100vmin; height: 100vmin; transform: translate(-50%, -50%);
   background: url("splash/boot.jpg") center / cover no-repeat; -webkit-mask-image: radial-gradient(circle, #000 55%, transparent 71%); mask-image: radial-gradient(circle, #000 55%, transparent 71%); }
 
