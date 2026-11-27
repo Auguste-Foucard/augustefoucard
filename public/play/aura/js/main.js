@@ -83,7 +83,7 @@ function viewport() {
   return { w: Math.round(w), h: Math.round(h) };
 }
 function resize() {
-  const { w: vw, h: vh } = viewport(); G.dpr = Math.min(devicePixelRatio || 1, G.quality < 0.6 ? 1.25 : 2);
+  const { w: vw, h: vh } = viewport(); G.dpr = Math.min(devicePixelRatio || 1, G.quality < 0.45 ? 1.5 : 2);
   document.documentElement.style.setProperty('--vh', vh + 'px'); scrollTo(0, 0);
   canvas.width = Math.round(vw * G.dpr); canvas.height = Math.round(vh * G.dpr); canvas.style.width = vw + 'px'; canvas.style.height = vh + 'px';
   G.W = vw; G.H = vh; G.universe.resize(vw, vh); refresh();
@@ -284,21 +284,25 @@ function autoCreate() {
 }
 
 // ---------- Boucle ----------
-let last = performance.now(); let perfAcc = 0, perfN = 0, perfGood = 0; let hudT = 0, saveT = 0, passiveVisT = 0;
+let last = performance.now(); let perfAcc = 0, perfN = 0, perfGood = 0, workAvg = 6; let hudT = 0, saveT = 0, passiveVisT = 0;
 function frame(now) {
   requestAnimationFrame(frame);
+  const work0 = performance.now(); try { tick(now); } finally { workAvg = workAvg * 0.92 + (performance.now() - work0) * 0.08; }
+}
+function tick(now) {
   let dt = (now - last) / 1000; last = now; if (dt > 0.1) dt = 0.1; if (dt <= 0) return;
   G.t += dt; state.stats.time += dt;
   palette.base = (palette.base + dt * 0.016) % 1;
 
-  // Qualité adaptative : on vise 60 i/s en ajustant le nombre de particules.
+  // Qualité adaptative : on mesure le temps de calcul réel de chaque image (et pas l'intervalle entre
+  // deux images) : un iPhone en mode économie d'énergie, limité à 30 i/s, garde toute sa beauté.
   perfAcc += dt; perfN++;
-  if (perfAcc > 1) { const avg = perfAcc / perfN; perfAcc = 0; perfN = 0;
-    if (HQ) {} else if (avg > 0.0195 && G.quality > 0.3) { G.quality *= 0.85; perfGood = 0; refresh(); }
-    else if (avg < 0.0172) { if (++perfGood > 3 && G.quality < 1) { G.quality = Math.min(1, G.quality * 1.08); perfGood = 0; refresh(); } }
+  if (perfAcc > 1) { const fps = perfN / perfAcc; perfAcc = 0; perfN = 0; G.fps = fps;
+    const slow = workAvg > 12.5 || (fps < 24 && workAvg > 7);
+    if (HQ) {} else if (slow && G.quality > 0.35) { G.quality *= 0.88; perfGood = 0; refresh(); }
+    else if (workAvg < 8) { if (++perfGood > 2 && G.quality < 1) { G.quality = Math.min(1, G.quality * 1.1); perfGood = 0; refresh(); } }
     G.P.budget = Math.round(G.P.cap * clamp(G.quality, 0.25, 1));
-    // Appareil à la peine : on réduit aussi la résolution de rendu (et on la rend quand ça va mieux).
-    const wantDpr = Math.min(devicePixelRatio || 1, G.quality < 0.6 ? 1.25 : 2); if (Math.abs(wantDpr - G.dpr) > 0.01 && (G.quality < 0.6 || G.quality > 0.85)) resize();
+    const wantDpr = Math.min(devicePixelRatio || 1, G.quality < 0.45 ? 1.5 : 2); if (Math.abs(wantDpr - G.dpr) > 0.01 && (G.quality < 0.45 || G.quality > 0.8)) resize();
   }
 
   // Production passive (secondaire) et lueurs qui en témoignent.
@@ -467,4 +471,4 @@ addEventListener('focus', () => checkUpdate());
 addEventListener('online', () => checkUpdate(true));
 setInterval(() => { if (!document.hidden) checkUpdate(); }, 10 * 60_000);
 setTimeout(() => checkUpdate(true), 4000);
-window.__aura = { G, audio, version: VERSION, screenInfo: () => `${innerWidth}×${innerHeight} · ${screen.width}×${screen.height} · ${G.W}×${G.H} · ${navigator.standalone ? 'app' : 'web'}`, get state() { return state; }, get sleep() { return sleep; }, get breath() { return breath; } };
+window.__aura = { G, audio, version: VERSION, screenInfo: () => `${innerWidth}×${innerHeight} · ${screen.width}×${screen.height} · ${G.W}×${G.H} · ${navigator.standalone ? 'app' : 'web'} · ${Math.round(G.fps || 0)} i/s · q ${G.quality.toFixed(2)} · ${workAvg.toFixed(1)} ms`, get state() { return state; }, get sleep() { return sleep; }, get breath() { return breath; } };
