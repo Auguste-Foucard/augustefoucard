@@ -39,6 +39,7 @@ export class UI {
           <button class="ib" data-open="sky" aria-label="${t('tabSky')}">${svg('menu')}<i class="dot" id="dotSky"></i></button>
         </div>
       </div>
+      <button class="obj" id="obj" hidden><span class="ot" id="objT"></span><span class="os" id="objS"></span><i class="ob"><b id="objB"></b></i></button>
       <div class="chip" id="chip"></div>
       <div class="toasts" id="toasts" aria-live="polite"></div>
       <div class="intro" id="intro" hidden><p class="i1">${t('start')}</p><p class="i2">${t('start2')}</p></div>
@@ -56,6 +57,7 @@ export class UI {
     this.$ = (id) => document.getElementById(id);
     this.root.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => this.openSheet(b.dataset.open)));
     this.$('counter').addEventListener('click', () => this.openSheet('evolve'));
+    this.$('obj').addEventListener('click', () => { audio.ui(); this.act.objectiveTap(); });
     this.$('exit').addEventListener('click', () => this.act.startMode('play'));
     this.$('sheetWrap').addEventListener('pointerdown', (e) => { if (e.target.id === 'sheetWrap') this.closeSheet(); });
     this.$('sheet').addEventListener('click', (e) => { if (e.target.closest('[data-close]')) this.closeSheet(); });
@@ -88,6 +90,20 @@ export class UI {
   counterPos() { const r = this.$('lv').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
   /** Vide la file des messages (on change de moment : seul le nouveau message compte). */
   clearToasts() { this.q = []; }
+  /** Objectif en cours, sous le compteur. */
+  objective(info, visible) {
+    const el = this.$('obj'); if (!info) { el.hidden = true; return; }
+    el.hidden = false; el.classList.toggle('off', !visible); if (!visible) return;
+    const name = L(info.o.name); let sub, k;
+    if (info.locked) { sub = t('objLevel', { n: info.need }); k = Math.min(1, this.s.level / info.need); }
+    else if (info.o.kind === 'sky') { sub = info.ready ? t('objTap') : `${this.fmt(this.s.light)} / ${this.fmt(info.cost)} ${t('light').toLowerCase()}`; k = info.ready ? 1 : Math.min(1, this.s.light / info.cost); }
+    else if (info.o.kind === 'level') { sub = `${t('level')} ${this.s.level} / ${info.o.n}`; k = Math.min(1, this.s.level / info.o.n); }
+    else { sub = `${info.v} / ${info.o.n}`; k = info.v / info.o.n; }
+    const key = name + sub; if (key !== this._objKey) { this._objKey = key; this.$('objT').textContent = name; this.$('objS').textContent = sub; }
+    this.$('objB').style.width = Math.round(k * 100) + '%'; el.classList.toggle('ready', !!info.ready);
+  }
+  objectiveDone() { const el = this.$('obj'); el.classList.remove('done'); void el.offsetWidth; el.classList.add('done'); this._objKey = null; }
+  skyCount(txt) { if (txt === this._skyTxt) return; this._skyTxt = txt; const b = this.$('breathLabel'); b.textContent = txt; b.classList.add('in'); }
   skyReady(on) { this.$('dotSky').classList.toggle('on', on); }
   /** Petit scintillement du compteur quand la lumière du repos arrive : discret. */
   glint() { const c = this.$('counter'); c.classList.remove('glint'); void c.offsetWidth; c.classList.add('glint'); }

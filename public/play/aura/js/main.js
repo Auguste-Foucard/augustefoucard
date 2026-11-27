@@ -15,6 +15,7 @@ import { UI } from './ui.js';
 import { playIntro } from './intro.js';
 import { Breath, Sleep } from './serenity.js';
 import { SKY, SkyPuzzle, nextSky, skyCost, skySpot, edgesOf } from './sky.js';
+import { OBJECTIVES, currentObjective, advanceObjective } from './objectives.js';
 
 const SAVE_KEY = 'aura.save.v1';
 const canvas = document.getElementById('c');
@@ -98,7 +99,7 @@ window.visualViewport?.addEventListener('resize', resize);
 setTimeout(resize, 400); // iOS finit parfois de mesurer après le premier affichage
 
 // ---------- Lumière ----------
-const ui = new UI(G, { buy, setPower, setSetting, startMode, reset, dawn, awakenSky, save: () => (dirty = true) });
+const ui = new UI(G, { buy, setPower, setSetting, startMode, reset, dawn, awakenSky, objectiveTap, save: () => (dirty = true) });
 
 function earn(amount, x = 0, y = 0, src = '', quiet = false) {
   if (!(amount > 0)) return;
@@ -188,7 +189,35 @@ function checkSky(dt) {
   skyT -= dt; if (skyT > 0 || G.mode !== 'play') return; skyT = 3;
   const c = nextSky(state); const ready = !!c && state.level >= c.gate && state.light >= skyCost(c);
   ui.skyReady(ready);
-  if (ready && !state.seen['sky_' + c.id]) { state.seen['sky_' + c.id] = 1; dirty = true; ui.toast(t('skyReady'), t('skyReady2'), 4200, 3); audio.note(14, { kind: 'bell', vel: 0.25 }); }
+  if (ready && !state.seen['sky_' + c.id]) { state.seen['sky_' + c.id] = 1; dirty = true; audio.note(14, { kind: 'bell', vel: 0.25 }); }
+}
+
+// ---------- Le fil des objectifs ----------
+const objLevel = (o) => o.kind === 'form' ? FORM[o.type]?.level ?? 1 : o.kind === 'power' ? POWER[o.id]?.level ?? 1 : o.kind === 'sky' ? SKY.find((c) => c.id === o.id).gate : o.kind === 'cosmic' ? FORM.star.level : o.kind === 'dawn' ? DAWN_LEVEL : o.kind === 'level' ? 1 : 1;
+function objectiveInfo() {
+  const cur = currentObjective(state); if (!cur) return null;
+  const need = objLevel(cur.o); const info = { ...cur, need, locked: state.level < need };
+  if (cur.o.kind === 'sky') { const c = SKY.find((x) => x.id === cur.o.id); info.cost = skyCost(c); info.ready = !info.locked && nextSky(state)?.id === c.id && state.light >= info.cost; }
+  return info;
+}
+if (!state.obj) { state.obj = { i: 0, base: 0 }; let guard = 0; while (currentObjective(state)?.done && guard++ < 60) { const i = state.obj.i + 1; state.obj = { i, base: 0 }; } } // déjà accomplis : validés en silence
+let objT = 0.5;
+function checkObjective(dt) {
+  objT -= dt; if (objT > 0) return; objT = 0.5;
+  const info = objectiveInfo(); ui.objective(info, G.mode === 'play');
+  if (!info || !info.done || G.mode !== 'play') return;
+  const r = Math.round(20 * Math.pow(info.i + 1, 1.3)) * gainMult(state); earn(r, 60, 60, 'objective');
+  audio.note(9, { kind: 'bell', vel: 0.32 }); audio.note(14, { kind: 'crystal', vel: 0.25, delay: 0.12 }); haptic('soft');
+  ui.objectiveDone(); advanceObjective(state); dirty = true;
+  if (!currentObjective(state)) ui.toast(t('objAll'), t('objAll2'), 5000, 4);
+}
+/** Toucher l'objectif : lancer la constellation, ouvrir le bon onglet, ou rappeler la consigne. */
+function objectiveTap() {
+  const info = objectiveInfo(); if (!info) return;
+  if (info.o.kind === 'sky' && info.ready) { awakenSky(); return; }
+  if (info.locked) { ui.toast(L(info.o.name), t('objLevel', { n: info.need }), 2600, 3); return; }
+  if (info.o.tab) { ui.openSheet(info.o.tab); return; }
+  ui.toast(L(info.o.name), t('objGo'), 2600, 3);
 }
 
 // ---------- Le Chemin ----------
@@ -205,6 +234,7 @@ function checkQuests(dt) {
 
 // ---------- Modes ----------
 let breath = null; let sleep = null; let skyP = null; let autoT = 0;
+function usePower(id) { state.stats.powers = state.stats.powers || {}; state.stats.powers[id] = (state.stats.powers[id] || 0) + 1; dirty = true; }
 function startMode(m, opt) {
   if (breath) { breath.stop(); breath = null; if (m !== 'sleep') audio.bed(false); }
   if (sleep && m !== 'sleep') { sleep.stop(); sleep = null; }
@@ -283,15 +313,16 @@ function endPointer(e) {
   const p = ptrs.get(e.pointerId); if (!p) return; ptrs.delete(e.pointerId); if (!ptrs.size) ui.drawing(false);
   if (melodyOwner === e.pointerId) { melodyOwner = null; audio.strokeEnd(); } // la phrase se pose (ou une seule note pour une touche)
   if (G.mode === 'sky') { skyP?.endStroke(); if (p.vis.length > 2) G.filaments.push(new Filament(G, p.vis)); return; }
-  if (p.power === 'fireworks') { p.charge.release(); return; }
-  if (p.power === 'magnet') { sand.release(p); return; }
-  if (p.power === 'water') { ripples.release(p); return; }
+  if (p.power === 'fireworks') { p.charge.release(); if (p.primary) usePower('fireworks'); return; }
+  if (p.power === 'magnet') { if (p.primary && sand.gathered > 20) usePower('magnet'); sand.release(p); return; }
+  if (p.power === 'water') { ripples.release(p); if (p.primary) usePower('water'); return; }
   const dur = G.t - p.t0;
   if (p.dist < 14) { // simple touche : une pluie d'étincelles et une note
     burst(G.P, p.x, p.y, { n: Math.round(14 * G.pm), speed: 70, life: 1.4, s: 3.5, k: 0, h: p.h, spread: 0.6 });
     if (p.primary) earn(0.5 * gainMult(state), p.x, p.y, 'tap', true); return;
   }
   state.stats.strokes++;
+  if (p.power === 'kaleido' && p.primary) usePower('kaleido');
   const kal = p.power === 'kaleido'; const opts = kal ? { sym: symCount(), center: kCenter() } : {};
   let { type, info } = analyze(p.raw);
   if (type === 'galaxy' && state.level < FORM.galaxy.level) type = 'spiral';
@@ -393,7 +424,7 @@ function tick(now) {
   const live = G.creations.length + G.effects.length * 2 + G.filaments.length * 0.4 + G.P.n / 300; G.exposure += (clamp(1.5 / Math.sqrt(Math.max(1, live / 3)), 0.4, 1) * (sleep ? 0.45 : 1) - G.exposure) * Math.min(1, dt * 2);
   if (G.creations.length > 12) { const old = G.creations.find((c) => !c.reacted && c.life > c.age + 1); if (old) old.life = old.age + 1; } G.effects = G.effects.filter((o) => !o.dead); G.filaments = G.filaments.filter((o) => !o.dead);
   ripples.update(dt);
-  checkQuests(dt); checkSky(dt);
+  checkQuests(dt); checkSky(dt); checkObjective(dt);
   if (breath) breath.update(dt);
   if (sleep) sleep.update(dt);
   if (G.mode === 'contemplate' || (sleep && !sleep.ended)) { autoT -= dt; if (autoT < 0) { autoT = sleep ? rand(12, 18) : rand(3.5, 6.5); autoCreate(); } }
@@ -404,6 +435,7 @@ function tick(now) {
   // Rendu.
   ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0);
   G.universe.draw(ctx, G.t, G); mark('universe');
+  if (skyP) { ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 0.8; ctx.fillStyle = '#04030a'; ctx.fillRect(0, 0, G.W, G.H); ctx.globalAlpha = 1; } // défi du ciel : le reste du ciel s'efface
   ctx.globalCompositeOperation = 'lighter';
   for (const g of glowsQ) { const a = G.t - g.t; if (a < 1.6) glow(ctx, g.x, g.y, (g.r || 18) + a * (g.r ? 10 : 20), g.h, 0.5 * (g.a || 1) * Math.sin(Math.PI * Math.min(1, a / 1.6)) * (g.r ? 1.6 : 1)); }
   for (let i = glowsQ.length - 1; i >= 0; i--) if (G.t - glowsQ[i].t > 1.6) glowsQ.splice(i, 1);
@@ -414,7 +446,7 @@ function tick(now) {
   for (const o of G.effects) o.draw(ctx); mark('effects');
   drawLive();
   G.P.draw(ctx, G.intensity * clamp(1.4 / Math.sqrt(Math.max(1, G.P.n / 450)), 0.45, 1)); // beaucoup de particules : chacune plus discrète, pas de blanc mark('particles.draw');
-  if (skyP) skyP.draw(ctx);
+  if (skyP) { skyP.draw(ctx); ui.skyCount(t('skyCount', { a: skyP.lit.size, b: skyP.edges.length })); }
   if (breath) breath.draw(ctx);
   if (sleep) sleep.draw(ctx);
   drawMotes(dt);
