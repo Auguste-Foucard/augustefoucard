@@ -45,7 +45,8 @@ class Audio {
     const comp = c.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 18; comp.ratio.value = 6; comp.attack.value = 0.01; comp.release.value = 0.4;
     this.master.connect(comp); comp.connect(c.destination);
     // Filtre global (adouci en mode nuit).
-    this.tone = c.createBiquadFilter(); this.tone.type = 'lowpass'; this.tone.frequency.value = 12000; this.tone.connect(this.master);
+    this.tone = c.createBiquadFilter(); this.tone.type = 'lowpass'; this.tone.frequency.value = 12000;
+    this.sleepBus = c.createGain(); this.sleepBus.gain.value = 1; this.tone.connect(this.sleepBus); this.sleepBus.connect(this.master);
     this.dry = c.createGain(); this.dry.gain.value = 0.8; this.dry.connect(this.tone);
     // Réverbération (réponse impulsionnelle générée).
     this.verb = c.createConvolver(); this.verb.buffer = this.impulse(4.2, 2.6);
@@ -95,7 +96,8 @@ class Audio {
   // ---------- Nappe ----------
   startPad() {
     this.nextChord();
-    this.padTimer = setInterval(() => this.nextChord(), 13000);
+    const loop = () => { this.nextChord(); this.padTimer = setTimeout(loop, this.sleepMode ? 24000 : 13000); };
+    this.padTimer = setTimeout(loop, 13000);
   }
   nextChord() {
     if (!this.ctx) return;
@@ -103,12 +105,13 @@ class Audio {
     for (const n of this.padNodes) { n.g.gain.cancelScheduledValues(t); n.g.gain.setValueAtTime(n.g.gain.value, t); n.g.gain.linearRampToValueAtTime(0, t + 5); n.o.stop(t + 5.2); }
     this.padNodes = [];
     const layers = 1 + Math.min(3, Math.floor(this.richness / 2));
-    const notes = chord.slice(0, 3 + Math.min(2, layers - 1));
+    let notes = chord.slice(0, 3 + Math.min(2, layers - 1));
+    if (this.sleepMode) notes = chord.slice(0, 3).map((m) => m - 12); // berceuse : trois notes graves
     if (this.richness >= 5) notes.push(chord[0] - 12);
     if (this.richness >= 7) notes.push(chord[2] + 12);
     for (const m of notes) {
       for (let k = 0; k < 2; k++) {
-        const o = c.createOscillator(); o.type = k ? 'triangle' : 'sawtooth'; o.frequency.value = mtof(m); o.detune.value = (k ? 7 : -7) + rand(-3, 3);
+        const o = c.createOscillator(); o.type = k || this.sleepMode ? 'triangle' : 'sawtooth'; o.frequency.value = mtof(m); o.detune.value = (k ? 7 : -7) + rand(-3, 3);
         const g = c.createGain(); g.gain.value = 0; const peak = (k ? 0.11 : 0.05) / Math.sqrt(notes.length);
         g.gain.linearRampToValueAtTime(peak, t + 5.5);
         o.connect(g); g.connect(this.padBus); o.start(t);
@@ -123,6 +126,7 @@ class Audio {
   note(degree, { kind = 'kalimba', vel = 0.6, pan = 0, delay = 0, dur = 1 } = {}) {
     if (!this.ok || this.vol <= 0 || !this.ctx || this.ctx.state !== 'running') return;
     if (this.voices > 18) return;
+    if (this.sleepMode) { degree -= 5; vel *= 0.55; if (kind === 'crystal' || kind === 'glass' || kind === 'bell') kind = 'harp'; dur *= 1.4; }
     const c = this.ctx; const t = c.currentTime + 0.005 + delay;
     const f = mtof(degreeToMidi(degree));
     const out = c.createGain(); out.gain.value = 0;
@@ -161,7 +165,7 @@ class Audio {
   /** Note jouée pendant le tracé : hauteur selon la position, timbre selon la vitesse. */
   gesture(yNorm, speed, pan, power = 'filaments') {
     if (!this.ctx) return;
-    const now = performance.now(); const gap = speed > 1.4 ? 95 : speed > 0.6 ? 140 : 200;
+    const now = performance.now(); const gap = this.sleepMode ? 320 : speed > 1.4 ? 95 : speed > 0.6 ? 140 : 200;
     if (now - this.lastNote < gap) return;
     this.lastNote = now;
     let d = Math.round((1 - yNorm) * 12) + 2; // 3 octaves sur la hauteur de l'écran
@@ -232,6 +236,38 @@ class Audio {
     const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel * 0.08, t + 0.25); g.gain.linearRampToValueAtTime(0, t + 0.9);
     s.connect(f); f.connect(g); g.connect(this.verbIn); g.connect(this.dry); s.start(t); s.stop(t + 1);
   }
+
+  // ---------- Fond de vagues (sommeil, respiration) ----------
+  /** Bruit brun filtré : un ressac lointain. Son volume suit la respiration. */
+  bed(on) {
+    if (!this.ctx) return; const c = this.ctx; const t = c.currentTime;
+    if (on && !this.bedSrc) {
+      const len = c.sampleRate * 4; const b = c.createBuffer(2, len, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); let last = 0; for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.2; } }
+      this.bedSrc = c.createBufferSource(); this.bedSrc.buffer = b; this.bedSrc.loop = true;
+      this.bedLp = c.createBiquadFilter(); this.bedLp.type = 'lowpass'; this.bedLp.frequency.value = 420; this.bedLp.Q.value = 0.3;
+      this.bedGain = c.createGain(); this.bedGain.gain.value = 0;
+      this.bedSrc.connect(this.bedLp); this.bedLp.connect(this.bedGain); this.bedGain.connect(this.verbIn); this.bedGain.connect(this.dry); this.bedSrc.start();
+    }
+    if (!on && this.bedSrc) { const src = this.bedSrc; this.bedGain.gain.setTargetAtTime(0, t, 1.2); setTimeout(() => { try { src.stop(); } catch { /* déjà arrêté */ } }, 5000); this.bedSrc = null; }
+  }
+  /** Fait monter ou redescendre le ressac (0..1) en `dur` secondes. */
+  wave(level, dur = 4) {
+    if (!this.bedGain) return; const t = this.ctx.currentTime; const v = level * 0.5 * this.musicVol;
+    this.bedGain.gain.cancelScheduledValues(t); this.bedGain.gain.setValueAtTime(this.bedGain.gain.value, t); this.bedGain.gain.linearRampToValueAtTime(v, t + dur);
+    this.bedLp.frequency.cancelScheduledValues(t); this.bedLp.frequency.setValueAtTime(this.bedLp.frequency.value, t); this.bedLp.frequency.linearRampToValueAtTime(260 + level * 520, t + dur);
+  }
+
+  // ---------- Mode sommeil ----------
+  /** Sons graves, lents et feutrés ; tout est filtré plus fort. */
+  setSleep(on) {
+    this.sleepMode = on; if (!this.ctx) return; const t = this.ctx.currentTime;
+    this.tone.frequency.setTargetAtTime(on ? 1100 : this.night ? 2600 : 12000, t, 1.5);
+    this.bed(on); if (on) this.wave(0.4, 3);
+    this.nextChord();
+  }
+  /** Niveau global de la séance (0..1) : s'abaisse lentement jusqu'au silence. */
+  sleepLevel(v, dur = 2) { if (this.sleepBus) this.sleepBus.gain.setTargetAtTime(Math.max(0, v), this.ctx.currentTime, dur); }
 
   suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend().catch(() => {}); }
   resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); }

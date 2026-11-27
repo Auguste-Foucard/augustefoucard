@@ -7,10 +7,14 @@
 }
 .night { --accent: #ffc9a8; --accent2: #ffb3c1; --ink: #f2e4dc; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: #06060f; color: var(--ink); font-family: var(--font); overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-canvas#c { position: fixed; inset: 0; display: block; touch-action: none; }
+html { background: #0a0720; }
+html, body { margin: 0; height: 100%; background: #0a0720; color: var(--ink); font-family: var(--font); overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* Plein écran réel sur tous les iPhone : la hauteur suit l'écran entier (barre d'accueil comprise),
+   même quand iOS sous-estime la zone visible des apps installées. --vh est calculé en JS. */
+canvas#c { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100lvh; height: var(--vh, 100lvh); display: block; touch-action: none; }
+body::before { content: ""; position: fixed; left: 0; right: 0; top: 0; height: calc(var(--vh, 100lvh) + 200px); background: #0a0720; z-index: -1; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
-#ui { position: fixed; inset: 0; pointer-events: none; z-index: 6; transition: opacity 0.9s ease; }
+#ui { position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100lvh; height: var(--vh, 100lvh); pointer-events: none; z-index: 6; transition: opacity 0.9s ease; }
 body.entering #ui { opacity: 0; }
 body.entering #ui * { pointer-events: none !important; }
 #ui > .exit, #ui > .sheet-wrap { pointer-events: auto; }
@@ -54,13 +58,16 @@ body.entering #ui * { pointer-events: none !important; }
 .intro .i1 { font-size: 22px; font-weight: 300; letter-spacing: 0.1em; margin: 0; animation: float 5s ease-in-out infinite; }
 .intro .i2 { font-size: 13px; color: var(--dim); letter-spacing: 0.08em; margin: 10px 0 0; }
 @keyframes float { 50% { transform: translateY(-6px); opacity: 0.7; } }
-.breath-label { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; font-size: 20px; font-weight: 300; letter-spacing: 0.3em; text-transform: uppercase; pointer-events: none; opacity: 0; }
+.breath-label { position: absolute; left: 0; right: 0; bottom: calc(var(--sb) + 9%); text-align: center; font-size: 19px; font-weight: 300; letter-spacing: 0.3em; text-transform: uppercase; pointer-events: none; opacity: 0; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.breath-label small { font-size: 11px; letter-spacing: 0.2em; color: var(--dim); }
 .breath-label.in { animation: bl 3.6s ease forwards; }
 @keyframes bl { 20% { opacity: 0.9; } 80% { opacity: 0.7; } 100% { opacity: 0.25; } }
 
 /* Modes */
 .exit { position: absolute; top: calc(var(--st) + 12px); right: calc(var(--sr) + 12px); width: 44px; height: 44px; border-radius: 50%; display: none; place-items: center; color: var(--dim); background: rgba(255,255,255,0.03); border: 1px solid var(--line); opacity: 0.45; }
-body[data-mode="contemplate"] .exit, body[data-mode="breathe"] .exit { display: grid; }
+body[data-mode="contemplate"] .exit, body[data-mode="breathe"] .exit, body[data-mode="sleep"] .exit { display: grid; }
+body[data-mode="sleep"] .exit { opacity: 0.16; }
+body[data-mode="sleep"] .toasts { display: none; }
 body:not([data-mode="play"]) .hud, body:not([data-mode="play"]) .chip { opacity: 0 !important; pointer-events: none; }
 body:not([data-mode="play"]) .hud * { pointer-events: none; }
 body:not([data-mode="breathe"]) .breath-label { display: none; }
@@ -140,6 +147,12 @@ body.leaving canvas#c, body.leaving #ui { opacity: 0; transition: opacity 0.8s e
 .note.ver { opacity: 0.5; font-size: 11px; margin-top: 10px; }
 
 /* Bulle de relais : visible entre l'écran de démarrage de l'iPhone et la première image animée. */
-#boot { position: fixed; inset: 0; z-index: 4; background: radial-gradient(circle at 50% 50%, rgba(40, 24, 90, 0.3), rgba(0, 0, 0, 0) 70vmax), linear-gradient(#0a0720, #05040b); pointer-events: none; }
+#boot { position: fixed; top: 0; left: 0; right: 0; height: 100lvh; height: var(--vh, 100lvh); z-index: 4; background: radial-gradient(circle at 50% 50%, rgba(40, 24, 90, 0.3), rgba(0, 0, 0, 0) 70vmax), linear-gradient(#0a0720, #05040b); pointer-events: none; }
 #boot::after { content: ""; position: absolute; left: 50%; top: 50%; width: 100vmin; height: 100vmin; transform: translate(-50%, -50%);
   background: url("splash/boot.jpg") center / cover no-repeat; -webkit-mask-image: radial-gradient(circle, #000 55%, transparent 71%); mask-image: radial-gradient(circle, #000 55%, transparent 71%); }
+
+/* Cartes de sérénité avec choix (durée, rythme). */
+.pow.calm { align-items: flex-start; cursor: default; }
+.picks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pick { padding: 8px 12px; border-radius: 13px; font-size: 12.5px; border: 1px solid rgba(201, 184, 255, 0.35); background: rgba(201, 184, 255, 0.08); color: var(--ink); transition: background 0.3s, transform 0.15s; }
+.pick:active { transform: scale(0.95); background: rgba(201, 184, 255, 0.22); }

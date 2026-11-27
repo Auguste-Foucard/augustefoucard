@@ -49,7 +49,7 @@ export class Universe {
   }
   buildBg() {
     const c = document.createElement('canvas'); c.width = Math.ceil(this.W / 4); c.height = Math.ceil(this.H / 4); const g = c.getContext('2d');
-    const night = this.s.settings.night; const gr = g.createLinearGradient(0, 0, 0, c.height);
+    const night = this.s.settings.night || this.sleep; const gr = g.createLinearGradient(0, 0, 0, c.height);
     gr.addColorStop(0, night ? '#0b0608' : '#06060f'); gr.addColorStop(0.6, night ? '#0d0709' : '#080714'); gr.addColorStop(1, night ? '#120a09' : '#0d0a1a');
     g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height); this.bg = c;
   }
@@ -117,7 +117,7 @@ export class Universe {
 
     // Musique de l'univers : quelques notes douces jouées par tes étoiles.
     const richness = this.count();
-    if (richness > 0 && G.audioOn && t - this.lastMusic > Math.max(2.2, 9 - richness * 0.05)) {
+    if (richness > 0 && G.audioOn && t - this.lastMusic > Math.max(2.2, 9 - richness * 0.05) * (this.sleep ? 2.5 : 1)) {
       this.lastMusic = t; const src = this.randomSource();
       if (src) { audio.note(4 + Math.round((1 - src.y / H) * 9), { kind: Math.random() < 0.5 ? 'glass' : 'kalimba', vel: 0.16, pan: (src.x / W) * 2 - 1 }); G.twinkle(src.x, src.y, src.h); }
     }

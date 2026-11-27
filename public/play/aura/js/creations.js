@@ -1,6 +1,6 @@
 // Créations vivantes : chaque forme reconnue se transforme, s'anime, puis se dissout en lumière.
 import { TAU, clamp, lerp, rand, easeOut, easeInOut, smooth, dist } from './util.js';
-import { hue, glow, ribbon, burst, curtain, sat, palette } from './fx.js';
+import { hue, hueAt, glow, ribbon, burst, curtain, sat, palette } from './fx.js';
 import { idealize, glyph } from './shapes.js';
 import { audio } from './audio.js';
 
@@ -17,7 +17,7 @@ export class Creation {
     let cx = 0, cy = 0; for (const p of this.ideal) { cx += p.x; cy += p.y; } cx /= this.ideal.length; cy /= this.ideal.length;
     if (type === 'spiral' || type === 'galaxy') { cx = info.cx; cy = info.cy; }
     this.cx = cx; this.cy = cy; this.r = Math.max(20, info.size / 2);
-    this.life = LIFE[type] * G.lifeMult; this.h0 = hue(Math.random()); this.dir = info.dir || 1;
+    this.life = LIFE[type] * G.lifeMult; this.h0 = hueAt(Math.random()); this.dir = info.dir || 1;
     this.sym = opts.sym || 0; this.kc = opts.center || null; this.dead = false; this.reacted = false; this.seed = Math.random() * 100;
     this.petals = info.petals || 5; this.dissolved = false;
     if (type === 'star' || type === 'galaxy') this.boomed = false;

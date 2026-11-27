@@ -1,6 +1,6 @@
 // AURA — boucle de jeu, gestes, progression, sauvegarde.
 import { TAU, clamp, rand, smooth, easeOut, dist } from './util.js';
-import { Particles, setPalette, palette, hue, glow, ribbon, burst } from './fx.js';
+import { Particles, setPalette, palette, hue, hueAt, glow, ribbon, burst } from './fx.js';
 import { analyze, glyph } from './shapes.js';
 import { Creation, Filament, Ghost } from './creations.js';
 import { findReaction, Reaction } from './reactions.js';
@@ -12,6 +12,7 @@ import { FORM, FORMS, POWER, POWERS, newState, earn as earnState, formValue, gai
 import { t, L, setLang, lang } from './i18n.js';
 import { UI } from './ui.js';
 import { playIntro } from './intro.js';
+import { Breath, Sleep } from './serenity.js';
 
 const SAVE_KEY = 'aura.save.v1';
 const canvas = document.getElementById('c');
@@ -53,25 +54,43 @@ G.universe = new Universe(state);
 function refresh() {
   const s = state; const set = s.settings; const u = s.up;
   G.reduced = set.reduced;
-  G.intensity = set.intensity * (set.night ? 0.72 : 1);
-  G.pm = (1 + 0.3 * u.particles) * (0.45 + 0.55 * set.intensity) * G.quality * (set.reduced ? 0.55 : 1) * (set.night ? 0.75 : 1);
+  const sleeping = G.mode === 'sleep';
+  G.intensity = set.intensity * (set.night ? 0.72 : 1) * (sleeping ? 0.5 : 1);
+  G.pm = (1 + 0.3 * u.particles) * (0.45 + 0.55 * set.intensity) * G.quality * (set.reduced ? 0.55 : 1) * (set.night ? 0.75 : 1) * (sleeping ? 0.5 : 1);
   G.lifeMult = 1 + 0.25 * u.life; G.trailMult = 1 + 0.25 * u.trails; G.burstMult = 1 + 0.12 * u.bursts; G.bloom = u.bloom; G.bursts = u.bursts; G.colors = u.colors;
   G.strands = Math.min(4, 1 + Math.floor(u.trails / 3) + (u.particles >= 6 ? 1 : 0));
   G.reactWindow = 8 + 1.2 * u.links; G.reactDist = Math.min(G.W, G.H) * (0.28 + 0.04 * u.links);
-  G.P.trail = G.trailMult; G.P.timeScale = (set.reduced ? 0.7 : 1) * (set.night ? 0.8 : 1);
-  setPalette(set.palette, u.colors, set.night);
+  G.P.trail = G.trailMult; G.P.timeScale = (set.reduced ? 0.7 : 1) * (set.night ? 0.8 : 1) * (sleeping ? 0.55 : 1);
+  setPalette(set.palette, u.colors, set.night, sleeping);
   audio.setVolume(set.sound); audio.setMusic(set.music); audio.setRichness(u.resonance); audio.setNight(set.night);
-  setHaptics(set.haptics);
+  setHaptics(set.haptics && !sleeping);
   document.documentElement.classList.toggle('night', set.night);
 }
 
 // ---------- Écran ----------
+/** Taille réelle de l'écran. Sur iPhone (app installée), iOS peut annoncer une hauteur trop courte :
+ *  on prend la plus grande des mesures fiables, et l'écran physique quand l'app est en plein écran. */
+function viewport() {
+  const vv = window.visualViewport;
+  let w = Math.max(document.documentElement.clientWidth || 0, innerWidth || 0, vv ? vv.width : 0);
+  let h = Math.max(document.documentElement.clientHeight || 0, innerHeight || 0, vv ? vv.height : 0);
+  const standalone = navigator.standalone || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+  if (standalone && screen && screen.width && screen.height) {
+    const portrait = h >= w; const sw = portrait ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height); const sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    if (Math.abs(sw - w) < 2 && sh > h && sh - h < 140) h = sh; // seulement si c'est bien le même écran (pas un iPad en fenêtre)
+  }
+  return { w: Math.round(w), h: Math.round(h) };
+}
 function resize() {
-  const vw = innerWidth, vh = innerHeight; G.dpr = Math.min(devicePixelRatio || 1, G.quality < 0.6 ? 1.25 : 2);
+  const { w: vw, h: vh } = viewport(); G.dpr = Math.min(devicePixelRatio || 1, G.quality < 0.6 ? 1.25 : 2);
+  document.documentElement.style.setProperty('--vh', vh + 'px');
   canvas.width = Math.round(vw * G.dpr); canvas.height = Math.round(vh * G.dpr); canvas.style.width = vw + 'px'; canvas.style.height = vh + 'px';
   G.W = vw; G.H = vh; G.universe.resize(vw, vh); refresh();
 }
 addEventListener('resize', resize); resize();
+addEventListener('orientationchange', () => setTimeout(resize, 350));
+window.visualViewport?.addEventListener('resize', resize);
+setTimeout(resize, 400); // iOS finit parfois de mesurer après le premier affichage
 
 // ---------- Lumière ----------
 const ui = new UI(G, { buy, setPower, setSetting, startMode, reset, save: () => (dirty = true) });
@@ -87,6 +106,7 @@ function earn(amount, x = 0, y = 0, src = '', quiet = false) {
 }
 
 function onLevel(lv) {
+  if (G.mode === 'sleep') { ui.render(); return; } // jamais de fanfare pendant l'endormissement
   audio.levelUp(); haptic('strong');
   G.effects.push(new LevelRing(G));
   const forms = FORMS.filter((f) => f.level === lv); const powers = POWERS.filter((p) => p.level === lv);
@@ -126,11 +146,20 @@ function setSetting(k, v) {
 function reset() { localStorage.removeItem(SAVE_KEY); state = newState(); location.reload(); }
 
 // ---------- Modes ----------
-let breath = null; let autoT = 0;
-function startMode(m) {
+let breath = null; let sleep = null; let autoT = 0;
+function startMode(m, opt) {
+  if (breath) { breath.stop(); breath = null; if (m !== 'sleep') audio.bed(false); }
+  if (sleep && m !== 'sleep') { sleep.stop(); sleep = null; }
+  const wasCalm = G.mode === 'sleep';
   G.mode = m; document.body.dataset.mode = m; ui.closeSheet();
-  if (m === 'breathe') { breath = { t0: G.t, cycles: 0 }; for (const c of G.creations) c.life = Math.min(c.life, c.age + 1.2); } else breath = null;
-  autoT = 1.5; ui.render();
+  if (m === 'breathe' || m === 'sleep') for (const c of G.creations) c.life = Math.min(c.life, c.age + 1.2);
+  if (m === 'breathe') breath = new Breath(G, opt || 'calm', {
+    label: (id, sub) => ui.breath(t(id), sub),
+    done: (n) => { earn(n * 3 * gainMult(state), G.W / 2, G.H / 2, 'breath', true); ui.toast(t('breathDone', { n }), t('constellationBorn'), 4200, 3); setTimeout(() => G.mode === 'breathe' && startMode('play'), 600); },
+  });
+  if (m === 'sleep') { sleep = new Sleep(G, opt || 30, { end: () => {} }); ui.breath('', ''); }
+  if (m === 'sleep' || wasCalm) { G.universe.sleep = m === 'sleep'; G.universe.bg = null; G.universe.dirty = true; G.universe.galaxySprites.clear(); refresh(); }
+  autoT = m === 'sleep' ? 8 : 1.5; ui.render();
 }
 
 // ---------- Gestes ----------
@@ -145,9 +174,10 @@ function firstTouch() {
 
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault(); firstTouch(); if (skipIntro) { skipIntro(); haptic('soft'); }
+  if (sleep && sleep.ended) { startMode('play'); return; }
   if ((G.mode === 'free') && e.clientX > G.W - 64 && e.clientY < 64) { startMode('play'); return; }
   canvas.setPointerCapture?.(e.pointerId);
-  const p = { id: e.pointerId, x: e.clientX, y: e.clientY, raw: [{ x: e.clientX, y: e.clientY }], vis: [], t0: G.t, last: performance.now(), lx: e.clientX, ly: e.clientY, dist: 0, power: state.power, h: hue(Math.random()), hapD: 0 };
+  const p = { id: e.pointerId, x: e.clientX, y: e.clientY, raw: [{ x: e.clientX, y: e.clientY }], vis: [], t0: G.t, last: performance.now(), lx: e.clientX, ly: e.clientY, dist: 0, power: state.power, h: nextHue(), hapD: 0 };
   ptrs.set(e.pointerId, p); ui.drawing(true);
   if (p.power === 'fireworks') p.charge = new Charge(G, p.x, p.y, p.id);
   if (p.power === 'water') ripples.add(p.x, p.y, 1);
@@ -172,6 +202,10 @@ canvas.addEventListener('pointermove', (e) => {
     p.hapD += d; if (p.hapD > 140) { p.hapD = 0; haptic('tick'); }
   }
 }, { passive: false });
+
+let lastHuePos = Math.random();
+/** Teinte du prochain geste : toujours assez différente de la précédente. */
+function nextHue() { lastHuePos = (lastHuePos + 0.22 + Math.random() * 0.56) % 1; return hueAt(lastHuePos); }
 
 function addVis(p, x, y, speed) {
   const w = clamp(1.25 - speed * 0.35, 0.55, 1.3);
@@ -232,7 +266,8 @@ document.addEventListener('dblclick', (e) => e.preventDefault());
 // ---------- Contemplation : le monde se dessine tout seul ----------
 const AUTO = () => FORMS.filter((f) => f.level <= state.level && f.id !== 'mandala' && f.id !== 'galaxy').map((f) => f.id);
 function autoCreate() {
-  const types = AUTO(); const type = types[(Math.random() * types.length) | 0]; const m = Math.min(G.W, G.H) * rand(0.12, 0.22);
+  let types = AUTO(); if (sleep) types = types.filter((t) => ['line', 'circle', 'wave', 'flower', 'infinity'].includes(t)); // seulement des formes calmes
+  const type = types[(Math.random() * types.length) | 0]; const m = Math.min(G.W, G.H) * rand(0.12, 0.22);
   const cx = rand(G.W * 0.2, G.W * 0.8), cy = rand(G.H * 0.2, G.H * 0.8); const rot = rand(-0.4, 0.4);
   const pts = glyph(type, 0, 0, 1).map((q) => ({ x: cx + (q.x * Math.cos(rot) - q.y * Math.sin(rot)) * m, y: cy + (q.x * Math.sin(rot) + q.y * Math.cos(rot)) * m }));
   const { type: tp, info } = analyze(pts); if (!tp || state.level < FORM[tp].level) return;
@@ -245,7 +280,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   let dt = (now - last) / 1000; last = now; if (dt > 0.1) dt = 0.1; if (dt <= 0) return;
   G.t += dt; state.stats.time += dt;
-  palette.base = (palette.base + dt * 0.006) % 1;
+  palette.base = (palette.base + dt * 0.016) % 1;
 
   // Qualité adaptative : on vise 60 i/s en ajustant le nombre de particules.
   perfAcc += dt; perfN++;
@@ -267,11 +302,12 @@ function frame(now) {
   for (const list of [G.creations, G.effects, G.filaments]) { for (const o of list) o.update(dt); }
   G.creations = G.creations.filter((o) => !o.dead);
   // Exposition automatique : beaucoup de lumière superposée ne doit jamais éblouir.
-  const live = G.creations.length + G.effects.length * 2; G.exposure += (clamp(1.6 / Math.sqrt(Math.max(1, live / 3)), 0.45, 1) - G.exposure) * Math.min(1, dt * 2);
+  const live = G.creations.length + G.effects.length * 2; G.exposure += (clamp(1.6 / Math.sqrt(Math.max(1, live / 3)), 0.45, 1) * (sleep ? 0.45 : 1) - G.exposure) * Math.min(1, dt * 2);
   if (G.creations.length > 12) { const old = G.creations.find((c) => !c.reacted && c.life > c.age + 1); if (old) old.life = old.age + 1; } G.effects = G.effects.filter((o) => !o.dead); G.filaments = G.filaments.filter((o) => !o.dead);
   ripples.update(dt);
-  if (breath) updateBreath(dt);
-  if (G.mode === 'contemplate') { autoT -= dt; if (autoT < 0) { autoT = rand(3.5, 6.5); autoCreate(); } }
+  if (breath) breath.update(dt);
+  if (sleep) sleep.update(dt);
+  if (G.mode === 'contemplate' || (sleep && !sleep.ended)) { autoT -= dt; if (autoT < 0) { autoT = sleep ? rand(12, 18) : rand(3.5, 6.5); autoCreate(); } }
   const T = PROF ? performance.now : null; let t0 = T && T.call(performance);
   const mark = (k) => { if (!T) return; const t1 = performance.now(); G.prof[k] = (G.prof[k] || 0) * 0.95 + (t1 - t0) * 0.05; t0 = t1; };
   G.P.update(dt, G.t); mark('particles.update');
@@ -289,8 +325,10 @@ function frame(now) {
   for (const o of G.effects) o.draw(ctx); mark('effects');
   drawLive();
   G.P.draw(ctx, G.intensity); mark('particles.draw');
-  if (breath) drawBreath();
+  if (breath) breath.draw(ctx);
+  if (sleep) sleep.draw(ctx);
   drawMotes(dt);
+  if (sleep) sleep.drawDark(ctx);
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
 
   hudT -= dt; if (hudT < 0) { hudT = 0.12; ui.hud(); }
@@ -325,23 +363,6 @@ function drawMotes() {
     glow(ctx, x, y, m.soft ? 5 : 8, m.h, (m.soft ? 0.35 : 0.8) * Math.sin(Math.PI * Math.min(1, k * 1.2)));
   }
   if (G.motes.length > 80) G.motes.splice(0, G.motes.length - 80);
-}
-
-// ---------- Respiration guidée ----------
-const PHASES = [['inhale', 4], ['hold', 2], ['exhale', 6]];
-function breathPhase() { const T = PHASES.reduce((s, p) => s + p[1], 0); let a = (G.t - breath.t0) % T; for (const [id, d] of PHASES) { if (a < d) return { id, k: a / d }; a -= d; } return { id: 'exhale', k: 1 }; }
-function updateBreath(dt) {
-  const ph = breathPhase();
-  if (ph.id !== breath.ph) { breath.ph = ph.id; ui.breath(t(ph.id)); if (ph.id === 'inhale') audio.swell(0.8, 4); if (ph.id !== 'hold') audio.note(ph.id === 'inhale' ? 5 : 3, { kind: 'bell', vel: 0.25 }); haptic('soft'); }
-  const r = breathR(ph); const cx = G.W / 2, cy = G.H / 2;
-  breath._e = (breath._e || 0) + dt * 30 * G.pm;
-  while (breath._e > 1) { breath._e--; const a = rand(TAU); const inward = ph.id === 'inhale'; const R = inward ? r * 2.2 : r; G.P.add(cx + Math.cos(a) * R, cy + Math.sin(a) * R, Math.cos(a) * (inward ? -40 : 30), Math.sin(a) * (inward ? -40 : 30), { life: 2, s: rand(2, 4), grav: 0, tur: 4, drag: 0.6 }); }
-}
-function breathR(ph) { const m = Math.min(G.W, G.H); const lo = m * 0.1, hi = m * 0.3; const e = (x) => 0.5 - Math.cos(Math.PI * x) / 2; return ph.id === 'inhale' ? lo + (hi - lo) * e(ph.k) : ph.id === 'hold' ? hi : hi - (hi - lo) * e(ph.k); }
-function drawBreath() {
-  const ph = breathPhase(); const r = breathR(ph); const cx = G.W / 2, cy = G.H / 2; const h = hue(0.5);
-  glow(ctx, cx, cy, r * 2.4, h, 0.35); glow(ctx, cx, cy, r * 1.2, h + 30, 0.5);
-  ctx.globalAlpha = 0.5; ctx.strokeStyle = `hsl(${h | 0},70%,80%)`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
 }
 
 // ---------- Cycle de vie ----------
@@ -400,7 +421,7 @@ async function checkUpdate(force = false) {
   } catch { /* hors ligne : on réessaiera plus tard */ }
 }
 function applyUpdate(target) {
-  if (ptrs.size || G.mode === 'breathe') { setTimeout(() => applyUpdate(target), 1500); return; } // jamais au milieu d'un geste
+  if (ptrs.size || G.mode === 'breathe' || G.mode === 'sleep') { setTimeout(() => applyUpdate(target), 1500); return; } // jamais au milieu d'un geste
   try { sessionStorage.setItem('aura.upd', target); sessionStorage.setItem('aura.quick', '1'); } catch { /* indisponible */ }
   updating = true; save(); ui.toast(t('updating'), '', 1400, 4);
   document.body.classList.add('leaving'); setTimeout(() => location.reload(), 900);
@@ -410,4 +431,4 @@ addEventListener('focus', () => checkUpdate());
 addEventListener('online', () => checkUpdate(true));
 setInterval(() => { if (!document.hidden) checkUpdate(); }, 10 * 60_000);
 setTimeout(() => checkUpdate(true), 4000);
-window.__aura = { G, version: VERSION, get state() { return state; } };
+window.__aura = { G, version: VERSION, get state() { return state; }, get sleep() { return sleep; }, get breath() { return breath; } };

@@ -1,6 +1,7 @@
 // Interface minimaliste : un compteur discret, trois accès, une feuille qui glisse et disparaît.
 import { FORMS, POWERS, COMBOS, UPGRADES, UPGRADE, upCost, reqMet, xpFor, passiveRate } from './economy.js';
 import { PALETTES } from './fx.js';
+import { PATTERNS } from './serenity.js';
 import { glyph } from './shapes.js';
 import { t, L, lang } from './i18n.js';
 import { fmt } from './util.js';
@@ -95,7 +96,7 @@ export class UI {
   }
   showIntro() { const i = this.$('intro'); i.hidden = false; requestAnimationFrame(() => i.classList.add('in')); }
   hideIntro() { const i = this.$('intro'); i.classList.remove('in'); setTimeout(() => (i.hidden = true), 1200); }
-  breath(txt) { const b = this.$('breathLabel'); b.classList.remove('in'); void b.offsetWidth; b.textContent = txt; b.classList.add('in'); }
+  breath(txt, sub = '') { const b = this.$('breathLabel'); b.classList.remove('in'); void b.offsetWidth; b.innerHTML = ''; const m = document.createElement('span'); m.textContent = txt; b.appendChild(m); if (sub) { const c = document.createElement('small'); c.textContent = sub; b.appendChild(c); } if (txt) b.classList.add('in'); }
 
   // ---------- Feuille ----------
   openSheet(tab) { this.tab = tab; audio.ui(); const w = this.$('sheetWrap'); w.hidden = false; this.render(); requestAnimationFrame(() => w.classList.add('open')); }
@@ -147,11 +148,15 @@ export class UI {
   }
 
   tab_calm() {
+    const MOON = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>';
     return `<p class="note">${t('calmNote')}</p><div class="list">
-      <button class="pow" data-mode="free"><span class="pi">${svg('filaments', 26)}</span><span class="pt"><b>${t('free')}</b><small>${t('freeDesc')}</small></span></button>
+      <div class="pow calm"><span class="pi">${MOON}</span><span class="pt"><b>${t('sleepTitle')}</b><small>${t('sleepDesc')}</small>
+        <span class="picks">${[15, 30, 45, 60].map((m) => `<button class="pick" data-sleep="${m}">${m} min</button>`).join('')}</span></span></div>
+      <div class="pow calm"><span class="pi">${svg('water', 26)}</span><span class="pt"><b>${t('breathe')}</b><small>${t('breatheDesc2')}</small>
+        <span class="picks">${Object.entries(PATTERNS).map(([id, p]) => `<button class="pick" data-breath="${id}">${L(p.name)}</button>`).join('')}</span></span></div>
       <button class="pow" data-mode="contemplate"><span class="pi">${svg('powers', 26)}</span><span class="pt"><b>${t('contemplate')}</b><small>${t('contemplateDesc')}</small></span></button>
-      <button class="pow" data-mode="breathe"><span class="pi">${svg('water', 26)}</span><span class="pt"><b>${t('breathe')}</b><small>${t('breatheDesc')}</small></span></button>
-      <button class="pow ${this.s.settings.night ? 'sel' : ''}" data-toggle="night"><span class="pi">${'<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>'}</span><span class="pt"><b>${t('night')}</b><small>${this.s.settings.night ? t('on') : t('off')}</small></span></button>
+      <button class="pow" data-mode="free"><span class="pi">${svg('filaments', 26)}</span><span class="pt"><b>${t('free')}</b><small>${t('freeDesc')}</small></span></button>
+      <button class="pow ${this.s.settings.night ? 'sel' : ''}" data-toggle="night"><span class="pi">${MOON}</span><span class="pt"><b>${t('night')}</b><small>${t('nightDesc')} · ${this.s.settings.night ? t('on') : t('off')}</small></span></button>
     </div>`;
   }
 
@@ -177,6 +182,8 @@ export class UI {
     if (b.dataset.buy) { if (this.act.buy(b.dataset.buy)) this.render(); return; }
     if (b.dataset.power) { this.act.setPower(b.dataset.power); this.closeSheet(); return; }
     if (b.dataset.mode) { this.act.startMode(b.dataset.mode); return; }
+    if (b.dataset.sleep) { this.act.startMode('sleep', +b.dataset.sleep); return; }
+    if (b.dataset.breath) { this.act.startMode('breathe', b.dataset.breath); return; }
     if (b.dataset.toggle) { this.act.setSetting(b.dataset.toggle, !this.s.settings[b.dataset.toggle]); return; }
     if (b.dataset.pal) { this.act.setSetting('palette', b.dataset.pal); return; }
     if (b.dataset.lang) { this.act.setSetting('lang', b.dataset.lang); this.relabel(); return; }
