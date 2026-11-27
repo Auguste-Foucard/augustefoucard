@@ -12,7 +12,7 @@ const S = {
     branchGesture: 'Le geste', branchLight: 'La lumière', branchHarmony: 'L’harmonie',
     forms: 'Formes', combos: 'Harmonies', unknown: '???', atLevel: 'niveau {n}',
     sound: 'Sons', music: 'Nappes', haptics: 'Vibrations', intensity: 'Intensité visuelle', palette: 'Palette',
-    reduced: 'Mouvements réduits', night: 'Ambiance du soir', lang: 'Langue', reset: 'Recommencer un univers',
+    reduced: 'Mouvements réduits', night: 'Mode avant de dormir', lang: 'Langue', reset: 'Recommencer un univers',
     resetConfirm: 'Effacer tout ton univers et repartir de zéro ?', on: 'Oui', off: 'Non',
     free: 'Mode libre', freeDesc: 'Sans interface, sans score, sans objectif. Touche le coin en haut à droite pour revenir.',
     contemplate: 'Contempler', contemplateDesc: 'Ton univers s’anime tout seul. Laisse-toi porter.',
@@ -29,7 +29,7 @@ const S = {
     sleepDesc: 'Lumières ambrées et tamisées, sons graves et lents, ressac lointain. Une lueur respire et ralentit doucement ; tout s’éteint seul à la fin.',
     breatheDesc2: 'Une fleur de lumière s’ouvre et se referme avec toi. Chaque respiration ajoute une note, un pétale et une étoile.',
     breathDone: '{n} respirations', constellationBorn: 'Une constellation est née dans ton univers',
-    nightDesc: 'Couleurs chaudes et sons feutrés pour jouer le soir.',
+    nightDesc: 'Pour jouer le soir : lumière chaude sans bleu, sons feutrés, tout plus doux. Pour t’endormir, lance « S’endormir ».',
   },
   en: {
     light: 'Light', level: 'Level',
@@ -43,7 +43,7 @@ const S = {
     branchGesture: 'Gesture', branchLight: 'Light', branchHarmony: 'Harmony',
     forms: 'Shapes', combos: 'Harmonies', unknown: '???', atLevel: 'level {n}',
     sound: 'Sounds', music: 'Pads', haptics: 'Haptics', intensity: 'Visual intensity', palette: 'Palette',
-    reduced: 'Reduced motion', night: 'Evening mood', lang: 'Language', reset: 'Start a new universe',
+    reduced: 'Reduced motion', night: 'Bedtime mode', lang: 'Language', reset: 'Start a new universe',
     resetConfirm: 'Erase your whole universe and start over?', on: 'On', off: 'Off',
     free: 'Free mode', freeDesc: 'No interface, no score, no goal. Touch the top-right corner to come back.',
     contemplate: 'Contemplate', contemplateDesc: 'Your universe moves on its own. Let it carry you.',
@@ -60,7 +60,7 @@ const S = {
     sleepDesc: 'Warm, dimmed lights, deep slow sounds, a distant surf. A glow breathes and slowly slows down; everything fades out on its own.',
     breatheDesc2: 'A flower of light opens and closes with you. Each breath adds a note, a petal and a star.',
     breathDone: '{n} breaths', constellationBorn: 'A constellation was born in your universe',
-    nightDesc: 'Warm colours and muffled sounds for evening play.',
+    nightDesc: 'For evening play: warm light with no blue, muffled sounds, everything softer. To fall asleep, start “Fall asleep”.',
   },
 };
 

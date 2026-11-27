@@ -330,6 +330,7 @@ function frame(now) {
   if (sleep) sleep.draw(ctx);
   drawMotes(dt);
   if (sleep) sleep.drawDark(ctx);
+  else if (state.settings.night) { ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = 0.35; ctx.fillStyle = '#ff9b5c'; ctx.fillRect(0, 0, G.W, G.H); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; } // filtre la lumière bleue
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
 
   hudT -= dt; if (hudT < 0) { hudT = 0.12; ui.hud(); }
