@@ -19,7 +19,7 @@ export const FORM = Object.fromEntries(FORMS.map((f) => [f.id, f]));
 export const POWERS = [
   { id: 'filaments', level: 1, name: { fr: 'Filaments', en: 'Filaments' }, desc: { fr: 'Dessine des rubans lumineux. Les formes prennent vie.', en: 'Draw glowing ribbons. Shapes come alive.' } },
   { id: 'fireworks', level: 4, name: { fr: 'Feux d’artifice', en: 'Fireworks' }, desc: { fr: 'Garde le doigt posé pour accumuler, relâche pour libérer.', en: 'Hold to gather light, release to let it bloom.' } },
-  { id: 'water', level: 7, name: { fr: 'L’eau', en: 'Water' }, desc: { fr: 'Des ondulations qui se croisent et scintillent.', en: 'Ripples that cross and shimmer.' } },
+  { id: 'water', level: 7, name: { fr: 'L’eau', en: 'Water' }, desc: { fr: 'Touche pour une goutte, garde le doigt posé pour une grande onde. Là où les ondes se croisent, la lumière s’élève.', en: 'Tap for a drop, hold for a great wave. Where ripples cross, light rises.' } },
   { id: 'magnet', level: 11, name: { fr: 'Magnétisme', en: 'Magnetism' }, desc: { fr: 'Garde le doigt posé pour rassembler le sable cosmique, relâche pour le faire éclater. Deux doigts le repoussent.', en: 'Hold to gather the cosmic sand, release to make it burst. Two fingers push it away.' } },
   { id: 'kaleido', level: 14, name: { fr: 'Kaléidoscope', en: 'Kaleidoscope' }, desc: { fr: 'Chaque geste se multiplie en symétrie.', en: 'Every gesture multiplies in symmetry.' } },
 ];
