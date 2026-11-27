@@ -368,5 +368,34 @@ if (DEMO) {
   if (q.has('clean')) startMode('free');
 }
 
-if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('./sw.js').catch(() => {});
-window.__aura = { G, get state() { return state; } };
+// ---------- Mises à jour ----------
+// L'app installée sur l'écran d'accueil reste souvent ouverte en arrière-plan : à chaque retour,
+// on compare sa version à celle en ligne et on recharge en douceur (la progression est sauvegardée avant).
+const VERSION = document.querySelector('meta[name="aura-version"]')?.content || '';
+const VERSIONED = /^[0-9a-f]{10}$/.test(VERSION);
+let swReg = null; let updating = false; let lastCheck = 0;
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((r) => (swReg = r)).catch(() => {});
+async function checkUpdate(force = false) {
+  if (!VERSIONED || updating || DEMO || !navigator.onLine) return;
+  const now = Date.now(); if (!force && now - lastCheck < 60_000) return; lastCheck = now;
+  try {
+    swReg?.update().catch(() => {});
+    const r = await fetch('./version.json?t=' + now, { cache: 'no-store' }); if (!r.ok) return;
+    const { version } = await r.json();
+    let tried = null; try { tried = sessionStorage.getItem('aura.upd'); } catch { /* indisponible */ }
+    // Déjà rechargé pour cette version sans la recevoir (cache réseau en retard) : on n'insiste pas en boucle.
+    if (version && version !== VERSION && version !== tried) applyUpdate(version);
+  } catch { /* hors ligne : on réessaiera plus tard */ }
+}
+function applyUpdate(target) {
+  if (ptrs.size || G.mode === 'breathe') { setTimeout(() => applyUpdate(target), 1500); return; } // jamais au milieu d'un geste
+  try { sessionStorage.setItem('aura.upd', target); } catch { /* indisponible */ }
+  updating = true; save(); ui.toast(t('updating'), '', 1400, 4);
+  document.body.classList.add('leaving'); setTimeout(() => location.reload(), 900);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(true); });
+addEventListener('focus', () => checkUpdate());
+addEventListener('online', () => checkUpdate(true));
+setInterval(() => { if (!document.hidden) checkUpdate(); }, 10 * 60_000);
+setTimeout(() => checkUpdate(true), 4000);
+window.__aura = { G, version: VERSION, get state() { return state; } };

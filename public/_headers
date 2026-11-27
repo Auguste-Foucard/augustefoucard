@@ -10,3 +10,7 @@
 
 /media/*
   Cache-Control: public, max-age=604800
+
+# AURA : toujours vérifier qu'une version plus récente existe (mises à jour de l'app installée).
+/play/aura/*
+  Cache-Control: no-cache
