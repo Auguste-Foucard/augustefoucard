@@ -12,45 +12,44 @@ function conic(q, a, x, y, alpha, l = 74) {
 }
 function radial(q, x, y, r0, r1, stops) { const g = q.createRadialGradient(x, y, r0, x, y, r1); for (const [o, c] of stops) g.addColorStop(o, c); return g; }
 
-/** Intérieur de la bulle : aurore colorée, rubans lumineux et cœur incandescent (comme sur l'icône). */
+/** Intérieur de la bulle : une lueur violette douce et un arc-en-ciel à peine visible au fond (comme l'icône). */
 function interior(q, cx, cy, r, t, a) {
   if (a <= 0.01) return;
   q.save(); q.beginPath(); q.arc(cx, cy, r, 0, TAU); q.clip();
-  q.globalAlpha = a; q.fillStyle = radial(q, cx, cy + r * 0.2, 0, r * 1.1, [[0, '#2c1a60'], [1, '#090616']]); q.fillRect(cx - r, cy - r, r * 2, r * 2);
-  q.globalCompositeOperation = 'screen';
-  for (const [dx, dy, rr, h, sp, al] of [[-0.34, 0.1, 0.6, 302, 0.45, 0.95], [0.36, -0.1, 0.56, 188, -0.4, 0.95], [0.02, 0.48, 0.55, 332, 0.3, 0.85], [-0.12, -0.45, 0.42, 232, -0.55, 0.7], [0.4, 0.42, 0.34, 30, 0.35, 0.5]]) {
-    const ang = t * sp * 0.6; const x = cx + (dx * Math.cos(ang) - dy * Math.sin(ang)) * r, y = cy + (dx * Math.sin(ang) + dy * Math.cos(ang)) * r;
-    q.fillStyle = radial(q, x, y, 0, rr * r, [[0, `hsla(${h},98%,60%,${al * a})`], [0.55, `hsla(${h},98%,55%,${al * a * 0.45})`], [1, `hsla(${h},98%,50%,0)`]]); q.fillRect(x - rr * r, y - rr * r, rr * r * 2, rr * r * 2);
-  }
-  // Rubans d'aurore qui ondulent.
-  q.lineCap = 'round';
-  for (let k = 0; k < 3; k++) {
-    const h = [160, 295, 200][k]; const y0 = cy + r * 0.08 + k * r * 0.13;
-    for (const [w, al] of [[r * 0.14, 0.08], [r * 0.045, 0.3]]) {
-      q.strokeStyle = `hsla(${h},98%,76%,${al * a})`; q.lineWidth = w; q.beginPath();
-      for (let x = cx - r; x <= cx + r; x += Math.max(3, r / 40)) { const y = y0 + Math.sin(x / (r * 0.24) + k * 1.3 + t * 0.9) * r * 0.12; x === cx - r ? q.moveTo(x, y) : q.lineTo(x, y); }
-      q.stroke();
-    }
-  }
-  // Film de savon irisé.
-  q.lineWidth = Math.max(2, r * 0.06);
-  for (let k = 0; k < 4; k++) { q.strokeStyle = conic(q, t * 0.4 + k * 1.3, cx, cy, 0.14 * a, 72); q.beginPath(); q.ellipse(cx + r * 0.06, cy + r * 0.1, r * (0.78 - k * 0.12), r * (0.5 - k * 0.08), k * 0.45 - 0.2 + t * 0.12, 0, TAU); q.stroke(); }
-  // Cœur incandescent.
-  q.fillStyle = radial(q, cx + r * 0.05, cy + r * 0.12, 0, r * 0.22, [[0, `rgba(255,245,252,${0.6 * a})`], [0.45, `rgba(255,200,240,${0.25 * a})`], [1, 'rgba(255,200,240,0)']]); q.fillRect(cx - r, cy - r, r * 2, r * 2);
-  q.globalCompositeOperation = 'source-over'; q.fillStyle = radial(q, cx, cy, r * 0.55, r, [[0, 'rgba(0,0,0,0)'], [1, `rgba(10,5,30,${0.6 * a})`]]); q.fillRect(cx - r, cy - r, r * 2, r * 2);
-  const dome = q.createLinearGradient(0, cy - r, 0, cy); dome.addColorStop(0, `rgba(6,4,20,${0.75 * a})`); dome.addColorStop(1, 'rgba(6,4,20,0)'); q.fillStyle = dome; q.fillRect(cx - r, cy - r, r * 2, r);
+  q.globalAlpha = a; q.fillStyle = radial(q, cx, cy + r * 0.25, 0, r * 1.15, [[0, '#4a2a8c'], [0.6, '#22134f'], [1, '#0b0720']]); q.fillRect(cx - r, cy - r, r * 2, r * 2);
+  q.globalAlpha = 1; q.globalCompositeOperation = 'screen';
+  const br = 0.92 + Math.sin(t * 1.6) * 0.08; // la lueur respire
+  q.fillStyle = radial(q, cx, cy + r * 0.18, 0, r * 0.62, [[0, `rgba(205,165,255,${0.6 * a * br})`], [0.5, `rgba(170,120,255,${0.25 * a * br})`], [1, 'rgba(170,120,255,0)']]); q.fillRect(cx - r, cy - r, r * 2, r * 2);
+  q.lineWidth = r * 0.05;
+  [0, 30, 55, 130, 195, 245, 285].forEach((h, k) => { q.strokeStyle = `hsla(${h},90%,70%,${0.1 * a})`; q.beginPath(); q.arc(cx, cy + r * 1.05, r * (0.92 - k * 0.045), Math.PI * 1.18, Math.PI * 1.82); q.stroke(); });
+  q.globalCompositeOperation = 'source-over'; q.fillStyle = radial(q, cx, cy, r * 0.55, r, [[0, 'rgba(0,0,0,0)'], [1, `rgba(8,4,24,${0.7 * a})`]]); q.fillRect(cx - r, cy - r, r * 2, r * 2);
+  const dome = q.createLinearGradient(0, cy - r, 0, cy); dome.addColorStop(0, `rgba(6,4,20,${0.7 * a})`); dome.addColorStop(1, 'rgba(6,4,20,0)'); q.fillStyle = dome; q.fillRect(cx - r, cy - r, r * 2, r);
   q.restore();
+}
+
+/** Reflet sous la bulle, sur une surface sombre et lisse : il s'efface quand la bulle grandit. */
+function reflection(q, cx, cy, r, a) {
+  if (a <= 0.01) return;
+  const fy = cy + r + r * 0.05;
+  q.save(); q.translate(cx, fy + r * 0.02); q.scale(1, 0.12); q.fillStyle = radial(q, 0, 0, 0, r * 0.85, [[0, `rgba(0,0,0,${0.5 * a})`], [1, 'rgba(0,0,0,0)']]); q.beginPath(); q.arc(0, 0, r * 0.85, 0, TAU); q.fill(); q.restore();
+  q.save(); q.beginPath(); q.rect(cx - r * 1.2, fy, r * 2.4, r); q.clip();
+  q.translate(0, fy * 2); q.scale(1, -1);
+  const fade = q.createLinearGradient(0, fy, 0, fy - r * 0.9); fade.addColorStop(0, `rgba(150,110,240,${0.3 * a})`); fade.addColorStop(1, 'rgba(150,110,240,0)');
+  q.fillStyle = fade; q.beginPath(); q.arc(cx, cy, r, 0, TAU); q.fill();
+  q.strokeStyle = conic(q, -0.7, cx, cy, 0.35 * a, 82); q.lineWidth = Math.max(1.5, r * 0.02); q.beginPath(); q.arc(cx, cy, r * 0.99, Math.PI * 0.15, Math.PI * 0.85); q.stroke();
+  q.restore();
+  q.save(); q.globalCompositeOperation = 'lighter'; q.translate(cx, fy); q.scale(1, 0.1); q.fillStyle = radial(q, 0, 0, 0, r * 0.6, [[0, `rgba(190,140,255,${0.35 * a})`], [1, 'rgba(190,140,255,0)']]); q.beginPath(); q.arc(0, 0, r * 0.6, 0, TAU); q.fill(); q.restore();
 }
 
 /** Paroi irisée, halo et reflets. */
 function shell(q, cx, cy, r, t, a) {
   if (a <= 0.01) return;
   q.save(); q.globalCompositeOperation = 'lighter';
-  q.fillStyle = radial(q, cx, cy, r * 0.85, r * 1.55, [[0, `rgba(170,110,255,${0.4 * a})`], [0.5, `rgba(255,120,210,${0.14 * a})`], [1, 'rgba(150,110,255,0)']]); q.fillRect(cx - r * 1.6, cy - r * 1.6, r * 3.2, r * 3.2);
-  q.fillStyle = radial(q, cx - r * 0.25, cy - r * 0.3, 0, r, [[0, `rgba(255,255,255,${0.07 * a})`], [0.75, `rgba(160,140,255,${0.05 * a})`], [0.95, `rgba(210,180,255,${0.22 * a})`], [1, 'rgba(255,255,255,0)']]); q.beginPath(); q.arc(cx, cy, r, 0, TAU); q.fill();
+  q.fillStyle = radial(q, cx, cy, r * 0.85, r * 1.45, [[0, `rgba(150,110,255,${0.22 * a})`], [1, 'rgba(150,110,255,0)']]); q.fillRect(cx - r * 1.5, cy - r * 1.5, r * 3, r * 3);
+  q.fillStyle = radial(q, cx - r * 0.25, cy - r * 0.3, 0, r, [[0, `rgba(255,255,255,${0.07 * a})`], [0.75, `rgba(160,140,255,${0.05 * a})`], [0.95, `rgba(210,180,255,${0.08 * a})`], [1, 'rgba(255,255,255,0)']]); q.beginPath(); q.arc(cx, cy, r, 0, TAU); q.fill();
   const rot = -0.6 + t * 0.35;
-  q.strokeStyle = conic(q, rot, cx, cy, 0.28 * a, 72); q.lineWidth = Math.max(6, r * 0.09); q.beginPath(); q.arc(cx, cy, r - q.lineWidth / 2, 0, TAU); q.stroke();
-  q.strokeStyle = conic(q, rot, cx, cy, 0.95 * a, 70); q.lineWidth = Math.max(2, r * 0.032); q.beginPath(); q.arc(cx, cy, r - q.lineWidth / 2, 0, TAU); q.stroke();
+  q.strokeStyle = conic(q, rot, cx, cy, 0.22 * a, 80); q.lineWidth = Math.max(6, r * 0.09); q.beginPath(); q.arc(cx, cy, r - q.lineWidth / 2, 0, TAU); q.stroke();
+  q.strokeStyle = conic(q, rot, cx, cy, 0.95 * a, 84); q.lineWidth = Math.max(2, r * 0.022); q.beginPath(); q.arc(cx, cy, r - q.lineWidth / 2, 0, TAU); q.stroke();
   q.restore();
   // Reflets (lumière d'une fenêtre sur le verre).
   q.save(); q.globalAlpha = a;
@@ -99,8 +98,8 @@ export function playIntro({ reduced = false, quick = false, still = false, onEnt
   function drawAll(r, k, t) {
     const cx = W / 2, cy = H / 2;
     // Nuit autour de la bulle, percée par la bulle : l'univers du jeu apparaît à l'intérieur.
-    const bg = q.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#07061a'); bg.addColorStop(1, '#0b0919'); q.fillStyle = bg; q.fillRect(0, 0, W, H);
-    q.fillStyle = radial(q, cx, cy, 0, Math.max(W, H) * 0.7, [[0, 'rgba(40,24,90,0.55)'], [1, 'rgba(0,0,0,0)']]); q.fillRect(0, 0, W, H);
+    const bg = q.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#0a0720'); bg.addColorStop(1, '#05040b'); q.fillStyle = bg; q.fillRect(0, 0, W, H);
+    q.fillStyle = radial(q, cx, cy, 0, Math.max(W, H) * 0.7, [[0, 'rgba(40,24,90,0.3)'], [1, 'rgba(0,0,0,0)']]); q.fillRect(0, 0, W, H);
     for (const s of stars) { const d = s.d * Math.max(W, H) * 0.6; const tw = 0.4 + 0.6 * Math.sin(t * 2 + s.a * 5); q.fillStyle = `rgba(220,225,255,${0.35 * tw * (1 - k)})`; q.fillRect(cx + Math.cos(s.a) * d, cy + Math.sin(s.a) * d, s.s, s.s); }
     q.save(); q.globalCompositeOperation = 'destination-out'; q.fillStyle = radial(q, cx, cy, Math.max(0, r * 0.96), r, [[0, 'rgba(0,0,0,1)'], [1, 'rgba(0,0,0,0)']]); q.beginPath(); q.arc(cx, cy, r, 0, TAU); q.fill(); q.restore();
     interior(q, cx, cy, r, t, 1 - smooth(0.25, 0.85, k));
@@ -109,6 +108,7 @@ export function playIntro({ reduced = false, quick = false, still = false, onEnt
       for (const s of stars) { const d0 = r * s.d * 0.85 * (1 + sp * 0.6); const len = r * 0.02 + r * sp * 0.22 * s.s * s.d; const x0 = cx + Math.cos(s.a) * d0, y0 = cy + Math.sin(s.a) * d0;
         q.strokeStyle = `hsla(${s.h},95%,82%,${0.6 * fade})`; q.lineWidth = s.s * (0.8 + sp * 1.6); q.beginPath(); q.moveTo(x0, y0); q.lineTo(x0 + Math.cos(s.a) * len, y0 + Math.sin(s.a) * len); q.stroke(); }
       q.restore(); }
+    reflection(q, cx, cy, r, 1 - smooth(0, 0.3, k));
     shell(q, cx, cy, r, t, 1 - smooth(0.7, 1, k));
   }
 
