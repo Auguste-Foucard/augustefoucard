@@ -29,16 +29,16 @@ export class Universe {
   deposit(x, y, h, amount = 1) {
     const neb = this.u.nebula; const X = this.nx(x), Y = this.ny(y);
     const near = neb.find((b) => Math.hypot(b.x - X, b.y - Y) < 0.08 && Math.abs(((b.h - h + 540) % 360) - 180) < 50);
-    if (near) { near.a = Math.min(0.32, +(near.a + 0.01 * amount).toFixed(3)); near.r = Math.min(0.42, +(near.r + 0.004 * amount).toFixed(3)); }
+    if (near) { near.a = Math.min(0.2, +(near.a + 0.008 * amount).toFixed(3)); near.r = Math.min(0.3, +(near.r + 0.003 * amount).toFixed(3)); /* la nébuleuse s'étoffe sans devenir un gros nuage */ }
     else if (neb.length < CAP.nebula) neb.push({ x: +X.toFixed(3), y: +Y.toFixed(3), h: h | 0, r: +(0.08 + 0.03 * amount).toFixed(3), a: +(0.05 * Math.min(2, amount)).toFixed(3) });
-    else { const b = neb[(Math.random() * neb.length) | 0]; b.a = Math.min(0.5, b.a + 0.008); }
+    else { const b = neb[(Math.random() * neb.length) | 0]; b.a = Math.min(0.2, b.a + 0.006); }
     this.dirty = true;
   }
   count() { const u = this.u; return u.stars.length + u.flowers.length + u.galaxies.length * 6 + u.loops.length * 3 + u.constellations.length * 4 + u.auroras.length * 5; }
 
   buildNebula() {
     const W = this.W, H = this.H; const sc = 0.2; const c = this.neb; c.width = Math.max(2, Math.ceil(W * sc)); c.height = Math.max(2, Math.ceil(H * sc));
-    const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'lighter';
+    const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'screen'; // les nuages se fondent sans saturer
     const m = Math.max(c.width, c.height); const S = sat();
     for (const b of this.u.nebula) {
       const x = b.x * c.width, y = b.y * c.height, r = b.r * m; const gr = g.createRadialGradient(x, y, 0, x, y, r);
@@ -73,6 +73,7 @@ export class Universe {
   }
 
   draw(ctx, t, G) {
+    if (!this._nebFix) { this._nebFix = true; for (const b of this.u.nebula) { b.a = Math.min(b.a, 0.2); b.r = Math.min(b.r, 0.3); } this.dirty = true; }
     const W = this.W, H = this.H; const u = this.u; const I = G.intensity;
     if (!this.bg) this.buildBg(ctx);
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.fillStyle = this.bg; ctx.fillRect(0, 0, W, H);

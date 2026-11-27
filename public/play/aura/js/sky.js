@@ -85,15 +85,16 @@ export class SkyPuzzle {
     this.edges.forEach(([a, b], j) => {
       const A = this.P(a), B = this.P(b); const on = this.lit.has(this.key(a, b)); const h = this.h + j * 18;
       if (on || done) { for (const [w, al, l] of [[10, 0.12, 62], [3, 0.55, 74], [1.2, 0.95, 92]]) { ctx.globalAlpha = al * (1 + done * 0.4); ctx.strokeStyle = `hsl(${h | 0},${sat()}%,${l}%)`; ctx.lineWidth = w * (1 + done * 0.5); ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); } }
-      else if (G.t - this.t0 > 1.5) { ctx.globalAlpha = 0.09; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.setLineDash?.([3, 9]); ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); ctx.setLineDash?.([]); }
+      else { ctx.globalAlpha = 0.28 * Math.min(1, (G.t - this.t0) / 0.8); ctx.strokeStyle = `hsl(${h | 0},60%,85%)`; ctx.lineWidth = 1.6; ctx.setLineDash?.([4, 8]); ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); ctx.setLineDash?.([]); }
     });
     // Indice doux après un moment sans trouver : une lueur glisse sur un trait encore éteint.
-    if (!done && G.t - this.lastLit > 9) { const e = this.edges.find(([a, b]) => !this.lit.has(this.key(a, b))); if (e) { const A = this.P(e[0]), B = this.P(e[1]); const k = ((G.t - this.lastLit) % 2.2) / 2.2; glow(ctx, A.x + (B.x - A.x) * k, A.y + (B.y - A.y) * k, 14, this.h, 0.55 * Math.sin(Math.PI * k)); } }
+    const firstHint = this.lit.size === 0 && G.t - this.t0 > 1; if (!done && (firstHint || G.t - this.lastLit > 6)) { const e = this.edges.find(([a, b]) => !this.lit.has(this.key(a, b))); if (e) { const A = this.P(e[0]), B = this.P(e[1]); const k = ((G.t - this.lastLit) % 2.2) / 2.2; glow(ctx, A.x + (B.x - A.x) * k, A.y + (B.y - A.y) * k, 18, this.h, 0.8 * Math.sin(Math.PI * k)); glow(ctx, A.x, A.y, 34, this.h, 0.35 * (1 - k)); } }
     // Étoiles : faibles et palpitantes tant qu'on ne les a pas touchées.
     for (let i = 0; i < this.c.pts.length; i++) {
       const p = this.P(i); const v = this.visited.has(i) || done; const pul = 0.75 + 0.25 * Math.sin(t * 2.2 + i * 1.7);
       glow(ctx, p.x, p.y, (v ? 28 : 22) * pul * (1 + done * 0.6), this.h + i * 20, v ? 0.85 : 0.6);
       glow(ctx, p.x, p.y, 6, this.h + i * 20, v ? 1 : 0.85);
+      if (!done) { ctx.globalAlpha = (v ? 0.5 : 0.32) * pul; ctx.strokeStyle = `hsl(${(this.h + i * 20) | 0},70%,85%)`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(p.x, p.y, this.R * 0.62, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1; }
     }
     ctx.globalAlpha = 1;
   }
