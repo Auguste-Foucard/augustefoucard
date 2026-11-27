@@ -9,7 +9,7 @@ export const FORMS = [
   { id: 'triangle', level: 8, value: 38, name: { fr: 'Triangle', en: 'Triangle' }, desc: { fr: 'Le triangle projette un arc-en-ciel.', en: 'The triangle casts a rainbow.' } },
   { id: 'star', level: 10, value: 55, name: { fr: 'Étoile', en: 'Star' }, desc: { fr: 'L’étoile explose comme un feu d’artifice et reste dans ton ciel.', en: 'The star bursts like a firework and stays in your sky.' } },
   { id: 'flower', level: 15, value: 85, name: { fr: 'Fleur', en: 'Flower' }, desc: { fr: 'La fleur s’ouvre, puis perd ses pétales.', en: 'The flower opens, then sheds its petals.' } },
-  { id: 'heart', level: 20, value: 120, name: { fr: 'Cœur', en: 'Heart' }, desc: { fr: 'Le cœur bat et envoie des ondes roses.', en: 'The heart beats and sends out pink rings.' } },
+  { id: 'heart', level: 20, value: 120, name: { fr: 'Cœur', en: 'Heart' }, desc: { fr: 'Le cœur bat, puis projette une nuée de petits cœurs.', en: 'The heart beats, then sends out a cloud of little hearts.' } },
   { id: 'infinity', level: 25, value: 160, name: { fr: 'Infini', en: 'Infinity' }, desc: { fr: 'Des points de lumière tournent sur la boucle.', en: 'Dots of light travel around the loop.' } },
   { id: 'mandala', level: 30, value: 240, name: { fr: 'Mandala', en: 'Mandala' }, desc: { fr: 'Une forme fermée tracée avec le Kaléidoscope.', en: 'A closed shape drawn with the Kaleidoscope.' } },
   { id: 'galaxy', level: 50, value: 600, name: { fr: 'Galaxie', en: 'Galaxy' }, desc: { fr: 'Une grande spirale d’au moins trois tours.', en: 'A large spiral with at least three turns.' } },

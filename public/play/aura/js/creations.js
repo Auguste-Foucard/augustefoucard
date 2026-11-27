@@ -194,7 +194,10 @@ const BEHAVIOR = {
     update(c, dt, G, a) {
       const ph = (a % 0.95) / 0.95; const beat = Math.exp(-ph * 9) + 0.6 * Math.exp(-Math.max(0, ph - 0.22) * 9) * (ph > 0.22 ? 1 : 0);
       const sc = 1 + beat * 0.13; for (const p of c.pts) { p.x = c.cx + (p.x - c.cx) * sc; p.y = c.cy + (p.y - c.cy) * sc; }
-      const beatIx = Math.floor(a / 0.95); if (beatIx !== c._beat && a < c.life * 0.85) { c._beat = beatIx; (c.rings ||= []).push(G.t); if (beatIx > 0) audio.thump(); if (beatIx > 0 && beatIx % 2 === 0) audio.note(5 + (beatIx % 4), { kind: 'piano', vel: 0.3 }); G.haptic('soft');
+      const beatIx = Math.floor(a / 0.95); if (beatIx !== c._beat && a < c.life * 0.85) { c._beat = beatIx; (c.rings ||= []).push(G.t); if (beatIx > 0) audio.thump(); if (beatIx > 0 && beatIx % 2 === 0 && beatIx !== 2) audio.note(5 + (beatIx % 4), { kind: 'piano', vel: 0.3 }); G.haptic('soft');
+        // Au troisième battement, le cœur projette sa lumière : une onde en forme de cœur et une nuée de petits cœurs.
+        if (beatIx === 2 && !c.projected) { c.projected = true; for (let k = 0; k < (c.sym || 1); k++) { const [x, y] = c.tx(c.cx, c.cy, k); G.effects.push(new HeartProjection(G, x, y, c.r, c.h0, 1 / Math.sqrt(c.sym || 1))); }
+          audio.note(7, { kind: 'piano', vel: 0.34 }); audio.note(9, { kind: 'bell', vel: 0.24, delay: 0.1 }); audio.note(12, { kind: 'glass', vel: 0.2, delay: 0.22 }); G.haptic('strong'); }
         burst(G.P, c.cx, c.cy, { n: Math.round(14 * G.pm), speed: 90 * G.burstMult, life: 1.6, k: 0, s: 4, h: 335, spread: 0.6, grav: -8 }); }
     },
     draw(c, ctx, G, e) {
@@ -230,6 +233,51 @@ const BEHAVIOR = {
     draw(c, ctx, G, e) { glow(ctx, c.cx, c.cy, c.r * 0.9, c.h0, 0.4 * e); outline(c, ctx, G, e * 0.7, 2.4, 1.4); },
   },
 };
+
+// ---------- Projection du cœur ----------
+/** Cœur unité (pointe en bas), construit une fois. */
+const HEART = (() => { const p = new Path2D(); for (let i = 0; i <= 48; i++) { const a = (i / 48) * TAU; const x = 16 * Math.pow(Math.sin(a), 3) / 17; const y = -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a)) / 17; i ? p.lineTo(x, y) : p.moveTo(x, y); } p.closePath(); return p; })();
+const heartSprites = new Map();
+/** Petit cœur lumineux pré-rendu (halo + cœur plein), mis en cache par teinte. */
+function heartSprite(h) {
+  const key = Math.round(((h % 360) + 360) % 360 / 8) * 8; let cv = heartSprites.get(key); if (cv) return cv;
+  cv = document.createElement('canvas'); cv.width = cv.height = 96; const x = cv.getContext('2d');
+  const g = x.createRadialGradient(48, 50, 0, 48, 50, 46); g.addColorStop(0, `hsla(${key},90%,70%,0.45)`); g.addColorStop(1, `hsla(${key},90%,60%,0)`); x.fillStyle = g; x.fillRect(0, 0, 96, 96);
+  x.translate(48, 50); x.scale(22, 22); x.fillStyle = `hsl(${key},85%,72%)`; x.fill(HEART);
+  x.scale(0.55, 0.55); x.translate(-0.18, -0.25); x.fillStyle = `hsla(${key},100%,92%,0.55)`; x.fill(HEART); // reflet
+  heartSprites.set(key, cv); return cv;
+}
+export class HeartProjection {
+  constructor(G, cx, cy, r, h0, k = 1) {
+    this.G = G; this.cx = cx; this.cy = cy; this.r = r; this.born = G.t; this.dead = false;
+    const warm = () => { const u = Math.random(); return u < 0.68 ? 338 + rand(-20, 16) : u < 0.86 ? 290 + rand(-12, 12) : 38 + rand(-8, 8); }; // rose, lavande, doré
+    const n = Math.round((16 + 6 * G.bloom) * Math.max(0.5, G.lod) * k);
+    this.hearts = Array.from({ length: n }, (_, i) => {
+      const ang = -Math.PI / 2 + rand(-1.25, 1.25); const v = rand(50, 150);
+      return { x: cx + rand(-0.85, 0.85) * r, y: cy + rand(-0.7, 0.25) * r, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 20, s: rand(8, 20) * (0.8 + Math.min(1, r / 120) * 0.4), h: warm(), ph: rand(TAU), sw: rand(0.8, 1.6), life: rand(3.6, 6), d: i * 0.07 + rand(0, 0.1) };
+    });
+  }
+  update(dt) {
+    const a = this.G.t - this.born; if (a > 8.2) { this.dead = true; return; }
+    for (const q of this.hearts) { if (a < q.d) continue; q.vx *= 1 - 1.4 * dt; q.vy += (-42 - q.vy) * 0.9 * dt; q.x += (q.vx + Math.sin(this.G.t * q.sw + q.ph) * 22) * dt; q.y += q.vy * dt; }
+  }
+  draw(ctx) {
+    const G = this.G; const a = G.t - this.born; const e = G.exposure;
+    // Onde en forme de cœur qui s'étend.
+    for (let j = 0; j < 2; j++) {
+      const t = a - j * 0.28; if (t < 0 || t > 2.2) continue; const k = t / 2.2; const sc = this.r * (1 + easeOut(k) * 2.6);
+      ctx.save(); ctx.translate(this.cx, this.cy); ctx.scale(sc, sc); ctx.lineWidth = (3.2 - j) / sc;
+      ctx.globalAlpha = (1 - k) * 0.12 * e; ctx.fillStyle = `hsl(${340 - j * 20},80%,65%)`; if (!j) ctx.fill(HEART);
+      ctx.globalAlpha = (1 - k) * 0.55 * e; ctx.strokeStyle = `hsl(${(340 + k * 30 - j * 25) | 0},85%,76%)`; ctx.stroke(HEART); ctx.restore();
+    }
+    // Nuée de petits cœurs qui s'envolent en se balançant.
+    for (const q of this.hearts) {
+      const t = a - q.d; if (t < 0 || t > q.life) continue;
+      const al = smooth(0, 0.6, t) * (1 - smooth(q.life * 0.6, q.life, t)) * (0.75 + 0.25 * Math.sin(G.t * 5 + q.ph)) * e; const S = q.s * (0.6 + 0.4 * easeOut(Math.min(1, t / 0.6)));
+      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(Math.sin(G.t * q.sw + q.ph) * 0.3); ctx.globalAlpha = al * 0.7; ctx.drawImage(heartSprite(q.h), -S * 2.2, -S * 2.2, S * 4.4, S * 4.4); ctx.restore();
+    }
+  }
+}
 
 // ---------- Geste libre ----------
 /** Un geste non reconnu reste un filament vivant qui dérive et s'efface lentement : toujours récompensé. */
