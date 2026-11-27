@@ -65,6 +65,20 @@ export function analyze(raw) {
     return { type: turns > 2.6 && size > 160 ? 'galaxy' : 'spiral', info: { ...info, pts: p, turns, corr, cx: gx, cy: gy } };
   }
 
+  // Étoile tracée d'un seul trait (pentagramme) : deux tours, des traits qui se croisent plusieurs fois
+  // et un rayon qui varie beaucoup. Reconnue même aux pointes arrondies et pas tout à fait refermée.
+  const mrs = rs.reduce((a, b) => a + b, 0) / N; const cvs = Math.sqrt(rs.reduce((a, b) => a + (b - mrs) ** 2, 0) / N) / mrs;
+  if (Math.abs(total) > 2.7 * Math.PI && Math.abs(total) < 5.6 * Math.PI && cvs > 0.16 && crossings(p) >= 3) {
+    // Pointes : maxima du rayon, une seule par endroit (le départ et l'arrivée sont la même pointe).
+    const tips = [];
+    for (let i = 0; i < N; i++) {
+      let isMax = true; for (let k = -4; k <= 4; k++) { const j = i + k; if (k && j >= 0 && j < N && rs[j] > rs[i]) isMax = false; }
+      if (isMax && rs[i] > mrs && !tips.some((t) => Math.hypot(p[t].x - p[i].x, p[t].y - p[i].y) < size * 0.3)) tips.push(i);
+    }
+    const sharp = tips.map((i) => ({ i, a: 2.5, convex: true }));
+    return { type: 'star', info: { ...info, pts: p, cx: gx, cy: gy, r: mrs, pentagram: true, sharp: sharp.length >= 3 ? sharp : undefined } };
+  }
+
   const closed = gap / size < 0.42 || (gap / size < 0.6 && Math.abs(total) > 1.6 * Math.PI);
 
   // Infini : fermé, beaucoup de rotation mais signes qui s'annulent.
@@ -128,6 +142,22 @@ export function analyze(raw) {
   if (lobesW >= 2 && straight > 0.45) return { type: 'wave', info: { ...info, pts: p } };
   if (lobesW <= 1 && straight > 0.55) return { type: 'line', info: { ...info, pts: p } };
   return { type: null, info: { ...info, pts: p } };
+}
+
+/** Nombre de fois où le tracé se recoupe (segments non voisins). */
+function crossings(p) {
+  let c = 0; const n = p.length;
+  for (let i = 0; i < n - 1; i++) for (let j = i + 3; j < n - 1; j++) {
+    const a = p[i], b = p[i + 1], d = p[j], e = p[j + 1];
+    const d1 = (e.x - d.x) * (a.y - d.y) - (e.y - d.y) * (a.x - d.x), d2 = (e.x - d.x) * (b.y - d.y) - (e.y - d.y) * (b.x - d.x);
+    const d3 = (b.x - a.x) * (d.y - a.y) - (b.y - a.y) * (d.x - a.x), d4 = (b.x - a.x) * (e.y - a.y) - (b.y - a.y) * (e.x - a.x);
+    if (d1 * d2 < 0 && d3 * d4 < 0) {
+      // Seuls les vrais croisements comptent (pas un trait repassé presque parallèle).
+      const u = Math.abs(wrapAngle(ang(a, b) - ang(d, e))); const x = Math.min(u, Math.PI - u);
+      if (x > 0.45) { c++; j += 2; }
+    }
+  }
+  return c;
 }
 
 function correlation(rs) {
@@ -199,7 +229,7 @@ export function glyph(type, cx = 0.5, cy = 0.5, s = 0.36) {
       case 'wave': x = -1 + 2 * t; y = Math.sin(t * TAU * 1.5) * 0.45; break;
       case 'spiral': case 'galaxy': { const turns = type === 'galaxy' ? 3 : 2; const a = t * TAU * turns; const r = 0.08 + t * 0.92; x = Math.cos(a) * r; y = Math.sin(a) * r; break; }
       case 'triangle': { const k = Math.min(2.999, t * 3); const v = Math.floor(k), f = k - v; const A = (j) => [Math.cos(-1.57 + j * TAU / 3), Math.sin(-1.57 + j * TAU / 3)]; const a = A(v), b = A(v + 1); x = a[0] + (b[0] - a[0]) * f; y = a[1] + (b[1] - a[1]) * f; break; }
-      case 'star': { const k = Math.min(9.999, t * 10); const v = Math.floor(k), f = k - v; const A = (j) => { const r = j % 2 ? 0.42 : 1; const a = -1.57 + j * TAU / 10; return [Math.cos(a) * r, Math.sin(a) * r]; }; const a = A(v), b = A(v + 1); x = a[0] + (b[0] - a[0]) * f; y = a[1] + (b[1] - a[1]) * f; break; }
+      case 'star': { const k = Math.min(4.999, t * 5); const v = Math.floor(k), f = k - v; const A = (j) => { const a = -1.57 + j * 2 * TAU / 5; return [Math.cos(a), Math.sin(a)]; }; const a = A(v), b = A(v + 1); x = a[0] + (b[0] - a[0]) * f; y = a[1] + (b[1] - a[1]) * f; break; } // étoile d'un seul trait
       case 'flower': { const a = t * TAU; const r = 0.55 + 0.45 * Math.abs(Math.cos(a * 2.5)); x = Math.cos(a) * r; y = Math.sin(a) * r; break; }
       case 'heart': case 'mandala': { const a = t * TAU; x = 16 * Math.pow(Math.sin(a), 3) / 17; y = -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a)) / 17; if (type === 'mandala') { const r = 0.6 + 0.4 * Math.cos(a * 6); x = Math.cos(a) * r; y = Math.sin(a) * r; } break; }
       case 'infinity': { const a = t * TAU; const d = 1 + Math.sin(a) ** 2; x = Math.cos(a) / d; y = Math.sin(a) * Math.cos(a) / d; break; }
